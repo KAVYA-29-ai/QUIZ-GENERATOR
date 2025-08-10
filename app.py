@@ -77,8 +77,8 @@ def extract_text_from_pdf(pdf_file) -> str:
 
 
 async def generate_questions_with_claude(text_content: str, num_mcq: int = 5, num_tf: int = 5) -> Dict[str, Any]:
-    """Generate questions using Claude API (kept as-is; ensure your Claude key/usage elsewhere)."""
-    # Keep context length small
+    """Generate questions using Claude API."""
+    # Shorten content if too long
     if len(text_content) > 8000:
         text_content = text_content[:8000] + "...[Content truncated for processing]"
 
@@ -119,13 +119,19 @@ Guidelines:
 RESPOND ONLY WITH VALID JSON. DO NOT INCLUDE ANY TEXT OUTSIDE THE JSON STRUCTURE."""
 
     try:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            logger.error("Anthropic API key not set in environment variables.")
+            return generate_fallback_questions()
+
         response = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers={
                 "Content-Type": "application/json",
+                "x-api-key": api_key
             },
             json={
-                "model": "claude-sonnet-4-20250514",
+                "model": "claude-3-5-sonnet-20240620",  # Latest stable Claude model
                 "max_tokens": 2000,
                 "messages": [{"role": "user", "content": prompt}]
             },
@@ -137,30 +143,27 @@ RESPOND ONLY WITH VALID JSON. DO NOT INCLUDE ANY TEXT OUTSIDE THE JSON STRUCTURE
             return generate_fallback_questions()
 
         response_data = response.json()
-        # Anthropic/Claude response parsing may differ; this assumes response_data['content'][0]['text']
         claude_text = ""
+
         if isinstance(response_data, dict):
-            # defensive extraction
             if 'content' in response_data and isinstance(response_data['content'], list) and len(response_data['content']) > 0:
                 claude_text = response_data['content'][0].get('text', '')
             else:
-                # fallback: try top-level text
                 claude_text = response_data.get('text', '')
         else:
             claude_text = str(response_data)
 
+        # Clean JSON text
         claude_text = (claude_text or "").strip()
-        # strip markdown fences if present
-        if claude_text.startswith('```json'):
+        if claude_text.startswith("```json"):
             claude_text = claude_text[7:]
-        if claude_text.endswith('```'):
+        if claude_text.endswith("```"):
             claude_text = claude_text[:-3]
         claude_text = claude_text.strip()
 
         questions_data = json.loads(claude_text)
         if not isinstance(questions_data, dict):
             raise ValueError("Claude response is not a JSON object")
-
         if 'multiple_choice' not in questions_data or 'true_false' not in questions_data:
             raise ValueError("Response missing required fields")
 
@@ -178,12 +181,17 @@ RESPOND ONLY WITH VALID JSON. DO NOT INCLUDE ANY TEXT OUTSIDE THE JSON STRUCTURE
 
 
 def generate_fallback_questions():
-    """Simple fallback if LLM fails"""
+    """Fallback questions if LLM fails"""
     return {
         "multiple_choice": [
             {
                 "question": "Based on the uploaded content, which concept appears to be most important?",
-                "options": ["A) The first concept mentioned", "B) The most frequently discussed topic", "C) The conclusion of the chapter", "D) All concepts are equally important"],
+                "options": [
+                    "A) The first concept mentioned",
+                    "B) The most frequently discussed topic",
+                    "C) The conclusion of the chapter",
+                    "D) All concepts are equally important"
+                ],
                 "correct_answer": "B",
                 "explanation": "The most frequently discussed topics usually indicate key concepts in educational content."
             }
