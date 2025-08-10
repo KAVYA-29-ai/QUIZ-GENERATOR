@@ -26,8 +26,8 @@ ALLOWED_EXTENSIONS = {'pdf'}
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 
 # Bubble.io Integration Configuration
-BUBBLE_APP_BASE_URL = os.environ.get("BUBBLE_APP_BASE_URL", "https://your-app.bubbleapps.io")
-BUBBLE_API_TOKEN = os.environ.get("BUBBLE_API_TOKEN", "your_bubble_token_here")
+BUBBLE_APP_BASE_URL = os.environ.get("BUBBLE_APP_BASE_URL", "https://xxerror707-94447.bubbleapps.io/version-test")
+BUBBLE_API_TOKEN = os.environ.get("BUBBLE_API_TOKEN")
 BUBBLE_API_VERSION_PATH = "/version-test/api/1.1/obj"  # use /version-test for dev, omit for live
 
 # Create directories if they don't exist
