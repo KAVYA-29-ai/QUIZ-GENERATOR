@@ -26,9 +26,14 @@ ALLOWED_EXTENSIONS = {'pdf'}
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 
 # Bubble.io Integration Configuration
-BUBBLE_APP_BASE_URL = os.environ.get("BUBBLE_APP_BASE_URL", "https://xxerror707-94447.bubbleapps.io/version-test")
+# Make sure to set these as environment variables in Railway
+BUBBLE_APP_BASE_URL = os.environ.get(
+    "BUBBLE_APP_BASE_URL",
+    "https://xxerror707-94447.bubbleapps.io/version-test"
+).rstrip("/")
 BUBBLE_API_TOKEN = os.environ.get("BUBBLE_API_TOKEN")
-BUBBLE_API_VERSION_PATH = "/version-test/api/1.1/obj"  # use /version-test for dev, omit for live
+# For version-test (dev) use "/version-test/api/1.1/obj", for live omit version-test
+BUBBLE_API_VERSION_PATH = "/version-test/api/1.1/obj"
 
 # Create directories if they don't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -37,43 +42,46 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
-def allowed_file(filename):
+
+def allowed_file(filename: str) -> bool:
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def extract_text_from_pdf(pdf_file):
+
+def extract_text_from_pdf(pdf_file) -> str:
     """Extract text from PDF using PyPDF2"""
     try:
         pdf_reader = PyPDF2.PdfReader(pdf_file)
-        text = ""
-        
+        text_parts: List[str] = []
+
         for page_num, page in enumerate(pdf_reader.pages):
             try:
-                page_text = page.extract_text()
+                page_text = page.extract_text() or ""
                 if page_text.strip():
-                    text += f"\n--- Page {page_num + 1} ---\n"
-                    text += page_text
+                    text_parts.append(f"\n--- Page {page_num + 1} ---\n")
+                    text_parts.append(page_text)
             except Exception as e:
                 logger.warning(f"Error extracting text from page {page_num + 1}: {str(e)}")
                 continue
-        
-        # Clean up the text
-        text = re.sub(r'\n\s*\n', '\n\n', text)  # Remove excessive newlines
-        text = re.sub(r'\s+', ' ', text)  # Normalize spaces
-        
+
+        text = "".join(text_parts)
+        # Cleanup: collapse excessive whitespace but keep paragraphs
+        text = re.sub(r'\n\s*\n', '\n\n', text)
+        text = re.sub(r'[ \t]+', ' ', text)
+        text = re.sub(r' +\n', '\n', text)
         return text.strip()
-    
+
     except Exception as e:
         logger.error(f"Error extracting text from PDF: {str(e)}")
         return ""
 
+
 async def generate_questions_with_claude(text_content: str, num_mcq: int = 5, num_tf: int = 5) -> Dict[str, Any]:
-    """Generate questions using Claude API"""
-    
-    # Truncate text if it's too long (keeping first 8000 characters for context)
+    """Generate questions using Claude API (kept as-is; ensure your Claude key/usage elsewhere)."""
+    # Keep context length small
     if len(text_content) > 8000:
         text_content = text_content[:8000] + "...[Content truncated for processing]"
-    
+
     prompt = f"""Based on the following textbook chapter content, generate educational questions for students:
 
 CONTENT:
@@ -123,34 +131,41 @@ RESPOND ONLY WITH VALID JSON. DO NOT INCLUDE ANY TEXT OUTSIDE THE JSON STRUCTURE
             },
             timeout=30
         )
-        
+
         if response.status_code != 200:
             logger.error(f"Claude API error: {response.status_code} - {response.text}")
             return generate_fallback_questions()
-        
+
         response_data = response.json()
-        claude_text = response_data['content'][0]['text']
-        
-        # Clean the response to extract JSON
-        claude_text = claude_text.strip()
+        # Anthropic/Claude response parsing may differ; this assumes response_data['content'][0]['text']
+        claude_text = ""
+        if isinstance(response_data, dict):
+            # defensive extraction
+            if 'content' in response_data and isinstance(response_data['content'], list) and len(response_data['content']) > 0:
+                claude_text = response_data['content'][0].get('text', '')
+            else:
+                # fallback: try top-level text
+                claude_text = response_data.get('text', '')
+        else:
+            claude_text = str(response_data)
+
+        claude_text = (claude_text or "").strip()
+        # strip markdown fences if present
         if claude_text.startswith('```json'):
             claude_text = claude_text[7:]
         if claude_text.endswith('```'):
             claude_text = claude_text[:-3]
         claude_text = claude_text.strip()
-        
-        # Parse the JSON response
+
         questions_data = json.loads(claude_text)
-        
-        # Validate the structure
         if not isinstance(questions_data, dict):
-            raise ValueError("Response is not a valid JSON object")
-        
+            raise ValueError("Claude response is not a JSON object")
+
         if 'multiple_choice' not in questions_data or 'true_false' not in questions_data:
-            raise ValueError("Missing required question types in response")
-        
+            raise ValueError("Response missing required fields")
+
         return questions_data
-        
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Network error calling Claude API: {str(e)}")
         return generate_fallback_questions()
@@ -161,8 +176,9 @@ RESPOND ONLY WITH VALID JSON. DO NOT INCLUDE ANY TEXT OUTSIDE THE JSON STRUCTURE
         logger.error(f"Unexpected error generating questions: {str(e)}")
         return generate_fallback_questions()
 
+
 def generate_fallback_questions():
-    """Generate fallback questions when API fails"""
+    """Simple fallback if LLM fails"""
     return {
         "multiple_choice": [
             {
@@ -181,12 +197,13 @@ def generate_fallback_questions():
         ]
     }
 
+
 def post_to_bubble(data_type: str, payload: dict) -> dict:
-    """Post data to Bubble.io database"""
-    if BUBBLE_API_TOKEN == "your_bubble_token_here":
-        logger.warning("Bubble API token not configured, skipping Bubble integration")
+    """Post data to Bubble.io Data API (object create). Returns parsed JSON or error dict."""
+    if not BUBBLE_API_TOKEN:
+        logger.warning("Bubble API token not configured; skipping Bubble integration")
         return {"skipped": True, "reason": "No API token"}
-    
+
     url = f"{BUBBLE_APP_BASE_URL}{BUBBLE_API_VERSION_PATH}/{data_type}"
     headers = {
         "Authorization": f"Bearer {BUBBLE_API_TOKEN}",
@@ -197,8 +214,13 @@ def post_to_bubble(data_type: str, payload: dict) -> dict:
         r.raise_for_status()
         return r.json()
     except Exception as e:
-        logger.error(f"Bubble POST error for {data_type}: {e} - response: {getattr(e,'response',None)}")
-        return {"error": str(e)}
+        logger.error(f"Bubble POST error for {data_type}: {e} - response: {getattr(e, 'response', None)}")
+        # try return response body if available for debugging
+        try:
+            return {"error": str(e), "response_text": e.response.text}
+        except Exception:
+            return {"error": str(e)}
+
 
 def push_questions_to_bubble(questions_data: dict, file_id: str, original_filename: str) -> dict:
     """Push generated questions to Bubble.io database"""
@@ -208,7 +230,7 @@ def push_questions_to_bubble(questions_data: dict, file_id: str, original_filena
         "tf_created": 0,
         "errors": []
     }
-    
+
     try:
         # Create Quiz object (optional)
         quiz_payload = {
@@ -220,8 +242,8 @@ def push_questions_to_bubble(questions_data: dict, file_id: str, original_filena
         }
         quiz_resp = post_to_bubble("Quiz", quiz_payload)
         bubble_quiz_id = None
-        
-        if "id" in quiz_resp:
+
+        if isinstance(quiz_resp, dict) and "id" in quiz_resp:
             bubble_quiz_id = quiz_resp["id"]
             results["quiz_created"] = True
             logger.info(f"Created Quiz in Bubble with ID: {bubble_quiz_id}")
@@ -229,8 +251,8 @@ def push_questions_to_bubble(questions_data: dict, file_id: str, original_filena
             logger.info("Bubble integration skipped - no API token")
             return {"skipped": True}
         else:
-            results["errors"].append(f"Failed to create Quiz: {quiz_resp.get('error', 'Unknown error')}")
-        
+            results["errors"].append(f"Failed to create Quiz: {quiz_resp}")
+
         # Push MCQs
         for i, mcq in enumerate(questions_data.get("multiple_choice", [])):
             try:
@@ -247,19 +269,19 @@ def push_questions_to_bubble(questions_data: dict, file_id: str, original_filena
                     "question_type": "multiple_choice",
                     "question_number": i + 1
                 }
-                
+
                 if bubble_quiz_id:
                     payload["quiz"] = bubble_quiz_id
-                
+
                 mcq_resp = post_to_bubble("Question", payload)
-                if "id" in mcq_resp:
+                if isinstance(mcq_resp, dict) and "id" in mcq_resp:
                     results["mcq_created"] += 1
                 else:
-                    results["errors"].append(f"Failed to create MCQ {i+1}: {mcq_resp.get('error', 'Unknown error')}")
-                    
+                    results["errors"].append(f"Failed to create MCQ {i+1}: {mcq_resp}")
+
             except Exception as e:
                 results["errors"].append(f"Error processing MCQ {i+1}: {str(e)}")
-        
+
         # Push True/False questions
         for i, tf in enumerate(questions_data.get("true_false", [])):
             try:
@@ -271,25 +293,26 @@ def push_questions_to_bubble(questions_data: dict, file_id: str, original_filena
                     "question_type": "true_false",
                     "question_number": i + 1
                 }
-                
+
                 if bubble_quiz_id:
                     payload["quiz"] = bubble_quiz_id
-                
+
                 tf_resp = post_to_bubble("TFQuestion", payload)
-                if "id" in tf_resp:
+                if isinstance(tf_resp, dict) and "id" in tf_resp:
                     results["tf_created"] += 1
                 else:
-                    results["errors"].append(f"Failed to create T/F {i+1}: {tf_resp.get('error', 'Unknown error')}")
-                    
+                    results["errors"].append(f"Failed to create T/F {i+1}: {tf_resp}")
+
             except Exception as e:
                 results["errors"].append(f"Error processing T/F {i+1}: {str(e)}")
-        
+
         logger.info(f"Bubble integration results: {results}")
         return results
-        
+
     except Exception as e:
         logger.error(f"Error in push_questions_to_bubble: {str(e)}")
         return {"error": str(e)}
+
 
 @app.route('/')
 def index():
@@ -303,10 +326,11 @@ def index():
             "health": "/health"
         },
         "bubble_integration": {
-            "configured": BUBBLE_API_TOKEN != "your_bubble_token_here",
+            "configured": bool(BUBBLE_API_TOKEN),
             "base_url": BUBBLE_APP_BASE_URL
         }
     })
+
 
 @app.route('/health')
 def health():
@@ -314,39 +338,47 @@ def health():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "service": "QuizGenius Backend",
-        "bubble_integration": BUBBLE_API_TOKEN != "your_bubble_token_here"
+        "bubble_integration": bool(BUBBLE_API_TOKEN)
     })
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    """
+    Accepts multipart/form-data with key "file" (PDF).
+    Saves PDF, extracts text, stores text to outputs/<file_id>_content.txt and returns a file_id.
+    This is the endpoint Bubble should call with Send file = true.
+    """
     try:
         if 'file' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
-        
+            return jsonify({'error': 'No file provided (key "file" missing)'}), 400
+
         file = request.files['file']
-        
+
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-        
+
         if not allowed_file(file.filename):
             return jsonify({'error': 'Only PDF files are allowed'}), 400
-        
-        # Generate unique filename
+
+        # Generate unique filename and save
         file_id = str(uuid.uuid4())
-        filename = secure_filename(f"{file_id}_{file.filename}")
+        original_filename = secure_filename(file.filename)
+        filename = f"{file_id}_{original_filename}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Save file
+
         file.save(filepath)
-        
-        # Extract text from PDF
+        logger.info(f"Saved uploaded file to {filepath}")
+
+        # Extract text
         with open(filepath, 'rb') as pdf_file:
             text_content = extract_text_from_pdf(pdf_file)
-        
+
         if not text_content.strip():
-            os.remove(filepath)  # Clean up
-            return jsonify({'error': 'Could not extract text from PDF. Please ensure the PDF contains readable text.'}), 400
-        
+            os.remove(filepath)
+            logger.warning("Text extraction returned empty")
+            return jsonify({'error': 'Could not extract text from PDF. Ensure the PDF contains selectable text.'}), 400
+
         # Store file info
         file_info = {
             'file_id': file_id,
@@ -356,63 +388,63 @@ def upload_file():
             'text_length': len(text_content),
             'text_preview': text_content[:200] + "..." if len(text_content) > 200 else text_content
         }
-        
-        # Save extracted text for question generation
+
+        # Save extracted text for later question generation
         text_file_path = os.path.join(OUTPUT_FOLDER, f"{file_id}_content.txt")
         with open(text_file_path, 'w', encoding='utf-8') as f:
             f.write(text_content)
-        
+
+        logger.info(f"Extracted text saved to {text_file_path}")
+
         return jsonify({
             'message': 'File uploaded and processed successfully',
             'file_info': file_info,
             'text_extracted': True
         }), 200
-        
+
     except Exception as e:
-        logger.error(f"Error in upload endpoint: {str(e)}")
+        logger.exception("Error in upload endpoint")
         return jsonify({'error': f'Upload failed: {str(e)}'}), 500
+
 
 @app.route('/generate', methods=['POST'])
 def generate_questions():
     try:
         data = request.get_json()
-        
         if not data:
             return jsonify({'error': 'No JSON data provided'}), 400
-        
+
         file_id = data.get('file_id')
         num_mcq = data.get('num_mcq', 5)
         num_tf = data.get('num_tf', 5)
-        
+
         if not file_id:
             return jsonify({'error': 'file_id is required'}), 400
-        
+
         # Validate question counts
         if not isinstance(num_mcq, int) or not isinstance(num_tf, int):
             return jsonify({'error': 'num_mcq and num_tf must be integers'}), 400
-        
+
         if num_mcq < 1 or num_mcq > 20 or num_tf < 1 or num_tf > 20:
             return jsonify({'error': 'Question counts must be between 1 and 20'}), 400
-        
+
         # Read extracted text
         text_file_path = os.path.join(OUTPUT_FOLDER, f"{file_id}_content.txt")
-        
         if not os.path.exists(text_file_path):
             return jsonify({'error': 'File not found. Please upload the file first.'}), 404
-        
+
         with open(text_file_path, 'r', encoding='utf-8') as f:
             text_content = f.read()
-        
+
         if not text_content.strip():
             return jsonify({'error': 'No content found in the uploaded file'}), 400
-        
-        # Generate questions
-        logger.info(f"Generating {num_mcq} MCQ and {num_tf} T/F questions for file {file_id}")
-        
-        # Note: Using synchronous call for now - in production, consider making this async
+
+        logger.info(f"Generating {num_mcq} MCQ and {num_tf} T/F for file {file_id}")
+
+        # Generate questions (synchronous wrapper)
         import asyncio
         questions_data = asyncio.run(generate_questions_with_claude(text_content, num_mcq, num_tf))
-        
+
         # Save generated questions
         output_data = {
             'file_id': file_id,
@@ -423,57 +455,49 @@ def generate_questions():
                 'num_tf': num_tf
             }
         }
-        
+
         output_file_path = os.path.join(OUTPUT_FOLDER, f"{file_id}_questions.json")
         with open(output_file_path, 'w', encoding='utf-8') as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
-        
+
         return jsonify({
             'message': 'Questions generated successfully',
             'file_id': file_id,
             'questions': questions_data,
             'total_questions': len(questions_data.get('multiple_choice', [])) + len(questions_data.get('true_false', []))
         }), 200
-        
+
     except Exception as e:
-        logger.error(f"Error in generate endpoint: {str(e)}")
+        logger.exception("Error in generate endpoint")
         return jsonify({'error': f'Question generation failed: {str(e)}'}), 500
+
 
 @app.route('/generate-and-push', methods=['POST'])
 def generate_and_push_to_bubble():
-    """Generate questions and automatically push to Bubble.io"""
+    """Generate questions and push them to Bubble DB objects."""
     try:
         data = request.get_json()
-        
         if not data:
             return jsonify({'error': 'No JSON data provided'}), 400
-        
+
         file_id = data.get('file_id')
         num_mcq = data.get('num_mcq', 5)
         num_tf = data.get('num_tf', 5)
-        
+
         if not file_id:
             return jsonify({'error': 'file_id is required'}), 400
-        
-        # Validate question counts
-        if not isinstance(num_mcq, int) or not isinstance(num_tf, int):
-            return jsonify({'error': 'num_mcq and num_tf must be integers'}), 400
-        
-        if num_mcq < 1 or num_mcq > 20 or num_tf < 1 or num_tf > 20:
-            return jsonify({'error': 'Question counts must be between 1 and 20'}), 400
-        
+
         # Read extracted text
         text_file_path = os.path.join(OUTPUT_FOLDER, f"{file_id}_content.txt")
-        
         if not os.path.exists(text_file_path):
             return jsonify({'error': 'File not found. Please upload the file first.'}), 404
-        
+
         with open(text_file_path, 'r', encoding='utf-8') as f:
             text_content = f.read()
-        
+
         if not text_content.strip():
             return jsonify({'error': 'No content found in the uploaded file'}), 400
-        
+
         # Get original filename for Quiz title
         upload_files = os.listdir(UPLOAD_FOLDER)
         original_filename = "Unknown File"
@@ -481,17 +505,16 @@ def generate_and_push_to_bubble():
             if upload_file.startswith(file_id):
                 original_filename = upload_file.split('_', 1)[1] if '_' in upload_file else upload_file
                 break
-        
-        # Generate questions
-        logger.info(f"Generating and pushing {num_mcq} MCQ and {num_tf} T/F questions for file {file_id}")
-        
+
+        logger.info(f"Generating and pushing {num_mcq} MCQ and {num_tf} T/F for file {file_id}")
+
         import asyncio
         questions_data = asyncio.run(generate_questions_with_claude(text_content, num_mcq, num_tf))
-        
-        # Push to Bubble.io
+
+        # Push to Bubble
         bubble_results = push_questions_to_bubble(questions_data, file_id, original_filename)
-        
-        # Save generated questions locally as well
+
+        # Save locally
         output_data = {
             'file_id': file_id,
             'generation_time': datetime.now().isoformat(),
@@ -502,11 +525,11 @@ def generate_and_push_to_bubble():
             },
             'bubble_integration': bubble_results
         }
-        
+
         output_file_path = os.path.join(OUTPUT_FOLDER, f"{file_id}_questions.json")
         with open(output_file_path, 'w', encoding='utf-8') as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
-        
+
         return jsonify({
             'message': 'Questions generated and pushed to Bubble successfully',
             'file_id': file_id,
@@ -514,48 +537,49 @@ def generate_and_push_to_bubble():
             'total_questions': len(questions_data.get('multiple_choice', [])) + len(questions_data.get('true_false', [])),
             'bubble_integration': bubble_results
         }), 200
-        
+
     except Exception as e:
-        logger.error(f"Error in generate-and-push endpoint: {str(e)}")
+        logger.exception("Error in generate-and-push endpoint")
         return jsonify({'error': f'Question generation and push failed: {str(e)}'}), 500
+
 
 @app.route('/download/<file_id>')
 def download_questions(file_id):
     try:
         output_file_path = os.path.join(OUTPUT_FOLDER, f"{file_id}_questions.json")
-        
         if not os.path.exists(output_file_path):
             return jsonify({'error': 'Questions file not found'}), 404
-        
-        return send_from_directory(OUTPUT_FOLDER, f"{file_id}_questions.json", 
-                                 as_attachment=True, 
-                                 download_name=f"quiz_questions_{file_id}.json")
-        
+
+        return send_from_directory(OUTPUT_FOLDER, f"{file_id}_questions.json",
+                                   as_attachment=True,
+                                   download_name=f"quiz_questions_{file_id}.json")
+
     except Exception as e:
-        logger.error(f"Error in download endpoint: {str(e)}")
+        logger.exception("Error in download endpoint")
         return jsonify({'error': f'Download failed: {str(e)}'}), 500
+
 
 @app.route('/files/<file_id>')
 def get_file_info(file_id):
     try:
         output_file_path = os.path.join(OUTPUT_FOLDER, f"{file_id}_questions.json")
-        
         if not os.path.exists(output_file_path):
             return jsonify({'error': 'File not found'}), 404
-        
+
         with open(output_file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
+
         return jsonify(data), 200
-        
+
     except Exception as e:
-        logger.error(f"Error in get_file_info endpoint: {str(e)}")
+        logger.exception("Error in get_file_info endpoint")
         return jsonify({'error': f'Failed to get file info: {str(e)}'}), 500
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('DEBUG', 'False').lower() == 'true'
-    
+
     logger.info(f"Starting QuizGenius Backend with Bubble.io Integration on port {port}")
-    logger.info(f"Bubble integration configured: {BUBBLE_API_TOKEN != 'your_bubble_token_here'}")
+    logger.info(f"Bubble integration configured: {bool(BUBBLE_API_TOKEN)}")
     app.run(host='0.0.0.0', port=port, debug=debug)
