@@ -1,12 +1,96 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quiz Generator — Netlify POC</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QuizGen — AI Quiz Generator</title>
+
+  <!-- Anime.js for subtle animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" defer></script>
+  <!-- PDF.js (for client-side PDF text extraction) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" defer></script>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/script.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <h1>QuizGen</h1>
+        <p class="muted">AI-powered quiz generator & study assistant — instant, adaptive, exportable</p>
+      </div>
+      <nav class="nav">
+        <button id="helpBtn" class="btn small">Help</button>
+      </nav>
+    </header>
+
+    <main class="card">
+      <section class="controls">
+        <label class="file-label">
+          Upload (PDF/CSV/TXT):
+          <input id="fileInput" type="file" accept=".pdf,.txt,.csv" />
+        </label>
+
+        <textarea id="textArea" placeholder="Or paste text / syllabus / topic here (optional)" rows="4"></textarea>
+
+        <div class="row">
+          <select id="qType">
+            <option value="mixed">Mixed (MCQ / TF / Short)</option>
+            <option value="mcq">Multiple Choice</option>
+            <option value="tf">True / False</option>
+            <option value="short">Short Answer</option>
+          </select>
+
+          <input id="qCount" type="number" min="3" max="50" value="8" />
+
+          <input id="topic" placeholder="Focus topic (optional)" />
+
+          <button id="generateBtn" class="btn">Generate</button>
+        </div>
+
+        <div class="row small muted">
+          <span>Tip: For long PDFs, upload and set a topic for focused questions. PDF text is extracted locally to ensure fast, reliable behavior.</span>
+        </div>
+      </section>
+
+      <section class="results" id="results">
+        <div id="status" class="muted">No questions yet. Generate to begin.</div>
+
+        <div id="questionsContainer"></div>
+
+        <div id="quizControls" class="row" style="display:none">
+          <button id="startQuizBtn" class="btn">Start Quiz</button>
+          <button id="exportTxtBtn" class="btn">Export TXT</button>
+          <button id="exportPdfBtn" class="btn">Export PDF</button>
+        </div>
+
+        <div id="quizArea" style="display:none"></div>
+
+        <div id="reportArea" style="display:none" class="card small"></div>
+      </section>
+    </main>
+
+    <!-- Help modal -->
+    <div id="helpModal" class="modal" aria-hidden="true">
+      <div class="modal-card">
+        <h2>About QuizGen</h2>
+        <p>QuizGen generates MCQs, True/False, and short-answer questions from uploaded files or pasted text. It uses Google Gemini as primary, Hugging Face as fallback, and an internal fallback to guarantee results.</p>
+        <ul>
+          <li>Adaptive difficulty: correct streak increases difficulty automatically in quiz mode.</li>
+          <li>Summarize & explain: press Generate with "Short" type or ask in Chat.</li>
+          <li>Export: download questions as TXT or PDF.</li>
+        </ul>
+        <p class="muted">Tech: static frontend (PDF.js client extraction), Netlify Functions for LLM calls (Gemini/HF/fallback). No DB required.</p>
+        <div class="row" style="justify-content:flex-end">
+          <button id="closeHelp" class="btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer muted">Deploy to Netlify — set GEMINI_API_KEY/GEMINI_MODEL and/or HF_API_KEY/HF_MODEL in site env vars.</footer>
+  </div>
+</body>
 </html>
