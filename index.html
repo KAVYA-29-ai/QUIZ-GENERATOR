@@ -431,12 +431,158 @@
     <div id="root"></div>
     <script type="text/babel">
       const { useState, useEffect, useRef } = React;
-      const { motion, AnimatePresence } = Motion;
-      const { 
-        Upload, FileText, HelpCircle, Download, Play, 
-        CheckCircle, XCircle, Trophy, TrendingUp, 
-        Book, Lightbulb, Settings, Home
-      } = LucideReact;
+
+      // Simple icon components (replacing Lucide React)
+      const Upload = ({ size = 24, style = {} }) => (
+        React.createElement('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '2',
+          style
+        }, React.createElement('path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }),
+           React.createElement('polyline', { points: '7,10 12,15 17,10' }),
+           React.createElement('line', { x1: '12', y1: '15', x2: '12', y2: '3' }))
+      );
+
+      const FileText = ({ size = 24, style = {} }) => (
+        React.createElement('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '2',
+          style
+        }, React.createElement('path', { d: 'M14,2H6A2,2,0,0,0,4,4V20a2,2,0,0,0,2,2H18a2,2,0,0,0,2-2V8Z' }),
+           React.createElement('polyline', { points: '14,2 14,8 20,8' }),
+           React.createElement('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
+           React.createElement('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
+           React.createElement('polyline', { points: '10,9 9,9 8,9' }))
+      );
+
+      const HelpCircle = ({ size = 24, style = {} }) => (
+        React.createElement('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '2',
+          style
+        }, React.createElement('circle', { cx: '12', cy: '12', r: '10' }),
+           React.createElement('path', { d: 'M9.09,9a3,3,0,0,1,5.83,1c0,2-3,3-3,3' }),
+           React.createElement('point', { cx: '12', cy: '17' }))
+      );
+
+      const Download = ({ size = 24, style = {} }) => (
+        React.createElement('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '2',
+          style
+        }, React.createElement('path', { d: 'M21,15v4a2,2,0,0,1-2,2H5a2,2,0,0,1-2-2V15' }),
+           React.createElement('polyline', { points: '7,10 12,15 17,10' }),
+           React.createElement('line', { x1: '12', y1: '15', x2: '12', y2: '3' }))
+      );
+
+      const Play = ({ size = 24, style = {} }) => (
+        React.createElement('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '2',
+          style
+        }, React.createElement('polygon', { points: '5,3 19,12 5,21' }))
+      );
+
+      const CheckCircle = ({ size = 24, style = {} }) => (
+        React.createElement('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '2',
+          style
+        }, React.createElement('path', { d: 'M22,11.08V12a10,10,0,1,1-5.93-9.14' }),
+           React.createElement('polyline', { points: '22,4 12,14.01 9,11.01' }))
+      );
+
+      const XCircle = ({ size = 24, style = {} }) => (
+        React.createElement('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '2',
+          style
+        }, React.createElement('circle', { cx: '12', cy: '12', r: '10' }),
+           React.createElement('line', { x1: '15', y1: '9', x2: '9', y2: '15' }),
+           React.createElement('line', { x1: '9', y1: '9', x2: '15', y2: '15' }))
+      );
+
+      const Trophy = ({ size = 24, style = {} }) => (
+        React.createElement('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '2',
+          style
+        }, React.createElement('path', { d: 'M6,9H4.5A2.5,2.5,0,0,1,2,6.5v0A2.5,2.5,0,0,1,4.5,4H6' }),
+           React.createElement('path', { d: 'M18,9h1.5A2.5,2.5,0,0,0,22,6.5v0A2.5,2.5,0,0,0,19.5,4H18' }),
+           React.createElement('path', { d: 'M6,9a9,9,0,0,0,12,0' }))
+      );
+
+      const Book = ({ size = 24, style = {} }) => (
+        React.createElement('svg', {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: '2',
+          style
+        }, React.createElement('path', { d: 'M4,19.5A2.5,2.5,0,0,1,6.5,17H20' }),
+           React.createElement('path', { d: 'M6.5,2H20V22H6.5A2.5,2.5,0,0,1,4,19.5v-15A2.5,2.5,0,0,1,6.5,2z' }))
+      );
+
+      // Simple motion component (replacing Framer Motion)
+      const motion = {
+        div: ({ children, style, className, initial, animate, transition, ...props }) => {
+          const [isVisible, setIsVisible] = useState(false);
+          
+          useEffect(() => {
+            const timer = setTimeout(() => setIsVisible(true), 50);
+            return () => clearTimeout(timer);
+          }, []);
+          
+          const animatedStyle = {
+            ...style,
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0px)' : 'translateY(20px)',
+            transition: 'all 0.6s ease-in-out'
+          };
+          
+          return React.createElement('div', {
+            ...props,
+            className,
+            style: animatedStyle
+          }, children);
+        }
+      };
+
+      const AnimatePresence = ({ children }) => children;
 
       const QuizGen = () => {
         const [activeTab, setActiveTab] = useState('upload');
@@ -1300,4 +1446,4 @@ Rating: ${result.rating}
       }
     </script>
   </body>
-</html> 
+</html>
