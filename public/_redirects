@@ -1,1 +1,6 @@
-/*    /index.html   200
+# Netlify _redirects file
+# Handle function calls
+/.netlify/functions/* /.netlify/functions/:splat 200
+
+# Handle SPA routing - redirect all routes to index.html
+/* /index.html 200
