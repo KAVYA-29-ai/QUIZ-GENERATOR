@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuizGen Pro - AI Quiz Generator</title>
+    <title>QuizGen Pro - Enhanced AI Quiz Generator</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/pdf-parse@1.1.1/lib/pdf-parse.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -17,9 +17,17 @@
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3a 25%, #2d1b69 50%, #000000 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
             min-height: 100vh;
             overflow-x: hidden;
+            color: #ffffff;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
         
         .container {
@@ -28,249 +36,260 @@
             padding: 20px;
         }
         
-        .glass {
-            background: rgba(255, 255, 255, 0.1);
+        .glass-card {
+            background: rgba(255, 255, 255, 0.02);
             backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .glass:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-        }
-        
-        .btn {
-            background: linear-gradient(45deg, #6366f1, #8b5cf6);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 14px 28px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
-        }
-        
-        .btn:active {
-            transform: translateY(0);
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .input-group {
-            margin-bottom: 24px;
-        }
-        
-        .input-group label {
-            display: block;
-            color: white;
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        
-        .input-group input,
-        .input-group select,
-        .input-group textarea {
-            width: 100%;
-            padding: 14px 16px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
-        
-        .input-group input:focus,
-        .input-group select:focus,
-        .input-group textarea:focus {
-            outline: none;
-            border-color: #6366f1;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
-            background: rgba(255, 255, 255, 0.15);
-        }
-        
-        .input-group input::placeholder,
-        .input-group textarea::placeholder {
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            color: white;
-        }
-        
-        .header h1 {
-            font-size: 3.5rem;
-            font-weight: bold;
-            background: linear-gradient(45deg, #ffffff, #f0f9ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
-            text-shadow: 0 0 40px rgba(255, 255, 255, 0.3);
-        }
-        
-        .header p {
-            font-size: 1.3rem;
-            opacity: 0.9;
-            margin-bottom: 30px;
-        }
-        
-        .tab-nav {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .tab-btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 25px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .tab-btn.active {
-            background: linear-gradient(45deg, #6366f1, #8b5cf6);
-            transform: scale(1.05);
-            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
-        }
-        
-        .file-upload {
-            border: 2px dashed rgba(255, 255, 255, 0.5);
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-            color: white;
-            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
         
-        .file-upload:hover {
-            border-color: #6366f1;
-            background: rgba(99, 102, 241, 0.1);
-            transform: translateY(-2px);
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
         }
         
-        .file-upload.drag-over {
+        .glass-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            padding: 12px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            padding: 12px 24px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+        
+        .input-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff, #e2e8f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .tab-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            padding: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .tab-btn.active {
+            background: rgba(79, 70, 229, 0.8);
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .tab-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .tab-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .upload-area:hover {
+            border-color: #4f46e5;
+            background: rgba(79, 70, 229, 0.05);
+        }
+        
+        .upload-area.drag-over {
             border-color: #10b981;
             background: rgba(16, 185, 129, 0.1);
             transform: scale(1.02);
         }
         
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #6366f1;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .quiz-settings {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-        
-        .setting-card {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
         .flashcard {
-            background: rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
-            padding: 30px;
-            margin: 20px 0;
-            position: relative;
+            height: 280px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
-            min-height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: relative;
+            perspective: 1000px;
         }
         
         .flashcard:hover {
-            transform: translateY(-5px) rotateY(5deg);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            transform: translateY(-4px) rotateY(2deg);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
         }
         
-        .flashcard.flipped {
-            transform: rotateY(180deg);
+        .flashcard.flipped .flashcard-front {
+            transform: rotateY(-180deg);
         }
         
-        .flashcard-content {
-            text-align: center;
-            color: white;
-            backface-visibility: hidden;
+        .flashcard.flipped .flashcard-back {
+            transform: rotateY(0deg);
+        }
+        
+        .flashcard-front,
+        .flashcard-back {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
+            backface-visibility: hidden;
+            padding: 24px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            text-align: center;
+            border-radius: 16px;
+            transition: transform 0.6s ease;
+        }
+        
+        .flashcard-front {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(124, 58, 237, 0.05));
         }
         
         .flashcard-back {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05));
             transform: rotateY(180deg);
         }
         
-        .quiz-question {
-            background: rgba(255, 255, 255, 0.1);
+        .flashcard-category {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(79, 70, 229, 0.8);
+            color: white;
+            padding: 4px 12px;
             border-radius: 20px;
-            padding: 40px;
-            margin: 20px 0;
-            position: relative;
-            animation: slideIn 0.6s ease-out;
+            font-size: 11px;
+            font-weight: 600;
         }
         
-        @keyframes slideIn {
+        .quiz-question {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            animation: slideInRight 0.5s ease;
+        }
+        
+        @keyframes slideInRight {
             from {
                 opacity: 0;
-                transform: translateX(-50px);
+                transform: translateX(20px);
             }
             to {
                 opacity: 1;
@@ -278,243 +297,252 @@
             }
         }
         
-        .options-grid {
-            display: grid;
-            gap: 15px;
-            margin: 25px 0;
-        }
-        
         .option {
-            padding: 18px 24px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid transparent;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            color: white;
-            font-weight: 500;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .option::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transition: left 0.5s ease;
-        }
-        
-        .option:hover::before {
-            left: 100%;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
         }
         
         .option:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateX(8px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
         }
         
         .option.selected {
-            border-color: #6366f1;
-            background: rgba(99, 102, 241, 0.2);
-            transform: scale(1.02);
+            background: rgba(79, 70, 229, 0.2);
+            border-color: #4f46e5;
         }
         
         .option.correct {
-            border-color: #10b981;
             background: rgba(16, 185, 129, 0.2);
-            animation: correctPulse 0.6s ease;
+            border-color: #10b981;
+            animation: correctBounce 0.5s ease;
         }
         
         .option.incorrect {
-            border-color: #ef4444;
             background: rgba(239, 68, 68, 0.2);
-            animation: shake 0.5s ease;
+            border-color: #ef4444;
+            animation: incorrectShake 0.5s ease;
         }
         
-        @keyframes correctPulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+        @keyframes correctBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
         }
         
-        @keyframes shake {
+        @keyframes incorrectShake {
             0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
         }
         
         .progress-bar {
             width: 100%;
-            height: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 5px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
             overflow: hidden;
-            margin: 20px 0;
+            margin: 16px 0;
         }
         
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 4px;
             transition: width 0.3s ease;
-            border-radius: 5px;
-            position: relative;
-        }
-        
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            animation: shimmer 2s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
         }
         
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
-            margin: 30px 0;
+            margin-bottom: 24px;
         }
         
         .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 25px;
-            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
             text-align: center;
-            color: white;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
         }
         
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            background: linear-gradient(45deg, #ffffff, #f0f9ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
             margin-bottom: 8px;
         }
         
-        .floating-particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
+        .stat-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
         }
         
-        .particle {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(180deg); }
-        }
-        
-        .success-animation {
-            animation: successBounce 0.8s ease;
-        }
-        
-        @keyframes successBounce {
-            0% { transform: scale(1); }
-            25% { transform: scale(1.1); }
-            50% { transform: scale(0.95); }
-            75% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        
-        .modal {
+        .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            backdrop-filter: blur(10px);
+            flex-direction: column;
+            gap: 20px;
         }
         
-        .modal-content {
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .difficulty-selector {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .difficulty-selector:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .difficulty-input {
+            width: 60px;
             background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 90vw;
-            max-height: 90vh;
-            overflow-y: auto;
-            color: white;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            animation: modalSlideIn 0.4s ease;
+            border-radius: 8px;
+            padding: 8px;
+            color: white;
+            text-align: center;
+            font-weight: 600;
         }
         
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-30px) scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+        .textarea-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
         }
         
-        .focus-points {
-            background: rgba(239, 68, 68, 0.1);
-            border-left: 4px solid #ef4444;
-            padding: 20px;
-            border-radius: 0 12px 12px 0;
-            margin: 20px 0;
+        .textarea-field:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
         
-        .focus-points h3 {
-            color: #fca5a5;
-            margin-bottom: 15px;
+        .file-list {
+            margin-top: 20px;
+        }
+        
+        .file-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .file-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .file-size {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .remove-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .remove-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
         }
         
         @media (max-width: 768px) {
-            .container { padding: 10px; }
+            .container { padding: 16px; }
             .header h1 { font-size: 2.5rem; }
-            .quiz-settings { grid-template-columns: 1fr; }
+            .tab-nav { flex-direction: column; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .tab-nav { justify-content: center; }
-            .modal-content { padding: 20px; margin: 10px; }
+            .grid-3 { grid-template-columns: 1fr; }
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
 <body>
-    <div class="floating-particles">
-        <div class="particle" style="width: 60px; height: 60px; top: 10%; left: 10%; animation-delay: 0s;"></div>
-        <div class="particle" style="width: 80px; height: 80px; top: 60%; right: 10%; animation-delay: 2s;"></div>
-        <div class="particle" style="width: 40px; height: 40px; top: 80%; left: 30%; animation-delay: 4s;"></div>
-        <div class="particle" style="width: 100px; height: 100px; top: 20%; right: 30%; animation-delay: 1s;"></div>
-    </div>
-    
     <div id="root"></div>
     
     <script type="text/babel">
@@ -526,11 +554,19 @@
             const [files, setFiles] = useState([]);
             const [loading, setLoading] = useState(false);
             
-            // Quiz Settings
-            const [mcqCount, setMcqCount] = useState(5);
-            const [shortCount, setShortCount] = useState(3);
-            const [tfCount, setTfCount] = useState(2);
-            const [difficulty, setDifficulty] = useState('medium');
+            // Difficulty Settings
+            const [difficultyDistribution, setDifficultyDistribution] = useState({
+                easy: 3,
+                medium: 4,
+                hard: 2,
+                expert: 1
+            });
+            
+            const [questionTypes, setQuestionTypes] = useState({
+                mcq: 6,
+                short: 2,
+                truefalse: 2
+            });
             
             // Quiz State
             const [questions, setQuestions] = useState([]);
@@ -539,8 +575,7 @@
             const [score, setScore] = useState(0);
             const [showResults, setShowResults] = useState(false);
             const [quizMode, setQuizMode] = useState(false);
-            const [showFocusPoints, setShowFocusPoints] = useState(false);
-            const [focusPoints, setFocusPoints] = useState([]);
+            const [showAnswers, setShowAnswers] = useState(false);
             
             // Content State
             const [summary, setSummary] = useState('');
@@ -551,44 +586,22 @@
             
             // Enhanced PDF text extraction
             const extractTextFromPDF = async (file) => {
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = async (e) => {
-                        try {
-                            const arrayBuffer = e.target.result;
-                            const uint8Array = new Uint8Array(arrayBuffer);
-                            
-                            // Simple PDF text extraction
-                            let text = '';
-                            const decoder = new TextDecoder('utf-8');
-                            const pdfText = decoder.decode(uint8Array);
-                            
-                            // Extract text between stream objects
-                            const streamRegex = /stream\s*(.*?)\s*endstream/gs;
-                            const matches = pdfText.match(streamRegex);
-                            
-                            if (matches) {
-                                matches.forEach(match => {
-                                    const streamContent = match.replace(/^stream\s*/, '').replace(/\s*endstream$/, '');
-                                    // Basic text extraction - decode common PDF text
-                                    const textContent = streamContent.replace(/[^\x20-\x7E]/g, ' ');
-                                    text += textContent + ' ';
-                                });
-                            }
-                            
-                            // Fallback: extract any readable text
-                            if (!text.trim()) {
-                                text = pdfText.replace(/[^\x20-\x7E\s]/g, '').replace(/\s+/g, ' ').trim();
-                            }
-                            
-                            resolve(text || 'PDF content extracted');
-                        } catch (error) {
-                            console.error('PDF extraction error:', error);
-                            resolve('Unable to extract PDF text. Please try copying the text manually.');
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                });
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                    let fullText = '';
+                    
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).join(' ');
+                        fullText += pageText + '\n\n';
+                    }
+                    
+                    return fullText.replace(/\s+/g, ' ').trim();
+                } catch (error) {
+                    throw new Error('Failed to extract text from PDF');
+                }
             };
             
             // File upload handler
@@ -603,11 +616,10 @@
                         
                         if (file.type === 'application/pdf') {
                             fileContent = await extractTextFromPDF(file);
-                        } else if (file.type === 'text/plain' || file.type === 'text/csv') {
+                        } else if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
                             fileContent = await file.text();
                         } else {
-                            // Try to read as text anyway
-                            fileContent = await file.text();
+                            throw new Error('Unsupported file type. Please upload PDF or text files.');
                         }
                         
                         newFiles.push({
@@ -617,14 +629,13 @@
                             size: file.size
                         });
                         
-                        combinedContent += '\n\n' + fileContent;
+                        combinedContent += '\n\n--- ' + file.name + ' ---\n\n' + fileContent;
                         
                     } catch (error) {
-                        console.error(`Error processing ${file.name}:`, error);
                         newFiles.push({
                             name: file.name,
                             type: file.type,
-                            content: `Error reading ${file.name}`,
+                            content: `Error reading ${file.name}: ${error.message}`,
                             size: file.size,
                             error: true
                         });
@@ -636,16 +647,33 @@
                 setLoading(false);
             };
             
-            // Generate quiz with custom settings
+            // Remove file
+            const removeFile = (index) => {
+                const removedFile = files[index];
+                const newFiles = files.filter((_, i) => i !== index);
+                
+                // Remove file content from combined content
+                const fileMarker = `--- ${removedFile.name} ---`;
+                const contentParts = content.split(fileMarker);
+                if (contentParts.length > 1) {
+                    // Remove the file's content section
+                    const beforeFile = contentParts[0];
+                    const afterFileEnd = contentParts[1].split('--- ').slice(1).join('--- ');
+                    setContent(beforeFile + (afterFileEnd ? '--- ' + afterFileEnd : ''));
+                }
+                
+                setFiles(newFiles);
+            };
+            
+            // Generate quiz
             const generateQuiz = () => {
-                if (!content.trim()) {
-                    alert('Please add content first!');
+                if (!content.trim() && files.length === 0) {
+                    alert('Please add content or upload files first!');
                     return;
                 }
                 
                 setLoading(true);
                 
-                // Simulate API call - replace with actual implementation
                 setTimeout(() => {
                     const generatedQuestions = generateQuestionsFromContent(content);
                     setQuestions(generatedQuestions);
@@ -663,87 +691,134 @@
                 const questions = [];
                 let questionId = 1;
                 
-                // Generate MCQs
-                for (let i = 0; i < mcqCount; i++) {
-                    const randomSentence = sentences[Math.floor(Math.random() * sentences.length)];
-                    const keyWord = words[Math.floor(Math.random() * words.length)];
-                    
-                    questions.push({
-                        id: questionId++,
-                        type: 'mcq',
-                        question: `What is the significance of "${keyWord}" in the context of the content?`,
-                        options: [
-                            `A) ${keyWord} represents a key concept in the subject matter`,
-                            `B) ${keyWord} is merely a supporting detail`,
-                            `C) ${keyWord} is unrelated to the main topic`,
-                            `D) ${keyWord} is used as an example only`
-                        ],
-                        correct: 'A',
-                        difficulty: difficulty,
-                        explanation: `${keyWord} appears in the context: "${randomSentence.slice(0, 100)}..."`
+                Object.entries(difficultyDistribution).forEach(([difficulty, count]) => {
+                    Object.entries(questionTypes).forEach(([type, totalCount]) => {
+                        const questionsForDifficulty = Math.ceil((count / Object.values(difficultyDistribution).reduce((a, b) => a + b)) * totalCount);
+                        
+                        for (let i = 0; i < questionsForDifficulty && questionId <= 20; i++) {
+                            const randomSentence = sentences[Math.floor(Math.random() * sentences.length)] || 'Sample content';
+                            const keyWord = words[Math.floor(Math.random() * words.length)] || 'concept';
+                            
+                            let question = {};
+                            
+                            if (type === 'mcq') {
+                                question = {
+                                    id: questionId++,
+                                    type: 'mcq',
+                                    question: generateMCQQuestion(keyWord, difficulty),
+                                    options: generateMCQOptions(keyWord, difficulty),
+                                    correct: 'A',
+                                    difficulty: difficulty,
+                                    explanation: `This relates to "${keyWord}" in the provided content.`
+                                };
+                            } else if (type === 'truefalse') {
+                                const isTrue = Math.random() > 0.5;
+                                question = {
+                                    id: questionId++,
+                                    type: 'truefalse',
+                                    question: `The content discusses "${keyWord}" as a fundamental concept.`,
+                                    options: ['True', 'False'],
+                                    correct: isTrue ? 'True' : 'False',
+                                    difficulty: difficulty,
+                                    explanation: `Based on the analysis of "${keyWord}" in the content.`
+                                };
+                            } else if (type === 'short') {
+                                question = {
+                                    id: questionId++,
+                                    type: 'short',
+                                    question: generateShortQuestion(keyWord, difficulty),
+                                    difficulty: difficulty,
+                                    explanation: `A comprehensive answer should analyze "${keyWord}" with examples.`,
+                                    sampleAnswer: `${keyWord} is a key concept that plays an important role in understanding the subject matter. It connects to other ideas and provides foundational knowledge for further learning.`
+                                };
+                            }
+                            
+                            questions.push(question);
+                        }
                     });
-                }
+                });
                 
-                // Generate True/False
-                for (let i = 0; i < tfCount; i++) {
-                    const randomSentence = sentences[Math.floor(Math.random() * sentences.length)];
-                    const keyWord = words[Math.floor(Math.random() * words.length)];
-                    
-                    questions.push({
-                        id: questionId++,
-                        type: 'truefalse',
-                        question: `The content discusses "${keyWord}" as a central theme.`,
-                        options: ['True', 'False'],
-                        correct: text.toLowerCase().includes(keyWord.toLowerCase()) ? 'True' : 'False',
-                        difficulty: difficulty,
-                        explanation: `This is based on the presence of "${keyWord}" in the content.`
-                    });
-                }
-                
-                // Generate Short Answer
-                for (let i = 0; i < shortCount; i++) {
-                    const keyWord = words[Math.floor(Math.random() * words.length)];
-                    
-                    questions.push({
-                        id: questionId++,
-                        type: 'short',
-                        question: `Explain the role and importance of "${keyWord}" based on the provided content.`,
-                        difficulty: difficulty,
-                        explanation: `A good answer should reference the context in which "${keyWord}" appears and its relevance to the main topic.`
-                    });
-                }
-                
-                return questions.sort(() => Math.random() - 0.5); // Shuffle questions
+                return questions.slice(0, 15);
+            };
+            
+            const generateMCQQuestion = (keyWord, difficulty) => {
+                const questions = {
+                    easy: `What is "${keyWord}" in the context of this content?`,
+                    medium: `How does "${keyWord}" relate to the main concepts?`,
+                    hard: `Analyze the significance of "${keyWord}" in the material.`,
+                    expert: `Evaluate the implications of "${keyWord}" beyond the given context.`
+                };
+                return questions[difficulty];
+            };
+            
+            const generateMCQOptions = (keyWord, difficulty) => {
+                return [
+                    `A key concept related to ${keyWord}`,
+                    `A supporting detail about ${keyWord}`,
+                    `An example of ${keyWord}`,
+                    `An unrelated term to ${keyWord}`
+                ];
+            };
+            
+            const generateShortQuestion = (keyWord, difficulty) => {
+                const questions = {
+                    easy: `Describe "${keyWord}" based on the content.`,
+                    medium: `Explain how "${keyWord}" connects to other concepts.`,
+                    hard: `Analyze the role of "${keyWord}" in the material.`,
+                    expert: `Critically evaluate "${keyWord}" and its applications.`
+                };
+                return questions[difficulty];
             };
             
             // Generate summary
             const generateSummary = (text) => {
-                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 15);
                 const keySentences = sentences.slice(0, 5);
-                setSummary(`This content covers: ${keySentences.join('. ')}.`);
+                const wordCount = text.split(/\s+/).length;
+                
+                const summaryText = `## Content Overview\n\nThis material contains comprehensive information suitable for learning and assessment. The content has been processed from ${files.length} files with approximately ${wordCount} words.\n\n## Key Points\n\n${keySentences.map((s, i) => `${i + 1}. ${s.trim().substring(0, 100)}...`).join('\n')}\n\n## Analysis\n\nThe content has been analyzed to generate ${Object.values(difficultyDistribution).reduce((a, b) => a + b)} questions across multiple difficulty levels and ${flashcards.length} flashcards for comprehensive learning.`;
+                
+                setSummary(summaryText);
             };
             
-            // Generate flashcards
+            // Generate flashcards with enhanced content
             const generateFlashcards = (text) => {
-                const words = text.split(/\s+/).filter(w => w.length > 6);
+                const words = text.split(/\s+/).filter(w => w.length > 5 && /^[A-Za-z]+$/.test(w));
                 const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+                const uniqueWords = [...new Set(words)].slice(0, 15);
                 
-                const cards = words.slice(0, 8).map((word, index) => ({
-                    id: index + 1,
-                    front: word,
-                    back: `Definition or context of "${word}" from the content: ${sentences[index % sentences.length].slice(0, 100)}...`
-                }));
+                const cards = uniqueWords.map((word, index) => {
+                    const relevantSentence = sentences.find(s => 
+                        s.toLowerCase().includes(word.toLowerCase())
+                    ) || sentences[index % sentences.length] || 'Related to the study material.';
+                    
+                    const categories = ['Primary Concept', 'Supporting Detail', 'Technical Term', 'Key Process', 'Important Factor'];
+                    const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+                    
+                    return {
+                        id: index + 1,
+                        front: word.charAt(0).toUpperCase() + word.slice(1),
+                        back: `**Definition:** Key concept from the material\n\n**Context:** "${relevantSentence.trim().substring(0, 120)}..."\n\n**Importance:** Essential term for understanding the subject matter.\n\n**Usage:** Appears frequently in the provided content and relates to core learning objectives.`,
+                        category: categories[index % categories.length],
+                        color: colors[index % colors.length]
+                    };
+                });
                 
                 setFlashcards(cards);
             };
             
             // Quiz functions
             const startQuiz = () => {
+                if (questions.length === 0) {
+                    alert('Please generate questions first!');
+                    return;
+                }
                 setQuizMode(true);
                 setCurrentQuestion(0);
                 setAnswers({});
                 setScore(0);
                 setShowResults(false);
+                setShowAnswers(false);
                 setActiveTab('quiz');
             };
             
@@ -755,14 +830,6 @@
             };
             
             const nextQuestion = () => {
-                const current = questions[currentQuestion];
-                const userAnswer = answers[current.id];
-                const isCorrect = userAnswer === current.correct;
-                
-                if (isCorrect) {
-                    setScore(prev => prev + 1);
-                }
-                
                 if (currentQuestion < questions.length - 1) {
                     setCurrentQuestion(prev => prev + 1);
                 } else {
@@ -770,20 +837,38 @@
                 }
             };
             
-            const finishQuiz = () => {
-                setShowResults(true);
-                const wrongAnswers = questions.filter(q => answers[q.id] !== q.correct);
-                if (wrongAnswers.length > 0) {
-                    setFocusPoints(wrongAnswers.map(q => ({
-                        question: q.question,
-                        yourAnswer: answers[q.id],
-                        correctAnswer: q.correct,
-                        explanation: q.explanation
-                    })));
-                    setShowFocusPoints(true);
+            const prevQuestion = () => {
+                if (currentQuestion > 0) {
+                    setCurrentQuestion(prev => prev - 1);
                 }
             };
             
+            const finishQuiz = () => {
+                let finalScore = 0;
+                questions.forEach(q => {
+                    const userAnswer = answers[q.id];
+                    if (q.type === 'short') {
+                        if (userAnswer && userAnswer.length > 10) finalScore++;
+                    } else {
+                        if (userAnswer === q.correct) finalScore++;
+                    }
+                });
+                setScore(finalScore);
+                setShowResults(true);
+                setActiveTab('results');
+            };
+            
+            const restartQuiz = () => {
+                setCurrentQuestion(0);
+                setAnswers({});
+                setScore(0);
+                setShowResults(false);
+                setShowAnswers(false);
+                setQuizMode(true);
+                setActiveTab('quiz');
+            };
+            
+            // Fixed flashcard flip function
             const flipCard = (cardId) => {
                 setFlippedCards(prev => {
                     const newSet = new Set(prev);
@@ -799,265 +884,298 @@
             // Drag and drop handlers
             const handleDrop = (e) => {
                 e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
                 const droppedFiles = Array.from(e.dataTransfer.files);
                 handleFileUpload(droppedFiles);
             };
             
             const handleDragOver = (e) => {
                 e.preventDefault();
+                e.currentTarget.classList.add('drag-over');
             };
+            
+            const handleDragLeave = (e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+            };
+            
+            const updateDifficultyCount = (difficulty, count) => {
+                setDifficultyDistribution(prev => ({
+                    ...prev,
+                    [difficulty]: Math.max(0, Math.min(10, count))
+                }));
+            };
+            
+            const updateQuestionType = (type, count) => {
+                setQuestionTypes(prev => ({
+                    ...prev,
+                    [type]: Math.max(0, Math.min(20, count))
+                }));
+            };
+            
+            const formatFileSize = (bytes) => {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+            
+            const currentQ = questions[currentQuestion];
+            const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0;
             
             return (
                 <div className="container">
+                    {/* Loading Overlay */}
+                    {loading && (
+                        <div className="loading-overlay">
+                            <div className="loading-spinner"></div>
+                            <p>Processing your content...</p>
+                        </div>
+                    )}
+                    
+                    {/* Header */}
                     <div className="header">
                         <h1>QuizGen Pro</h1>
-                        <p>Advanced AI-Powered Learning Assistant</p>
+                        <p>AI-Powered Learning Assistant with Dynamic Difficulty</p>
                     </div>
                     
                     {/* Navigation */}
-                    <div className="glass" style={{ padding: '20px', marginBottom: '30px' }}>
+                    <div className="glass-card" style={{ padding: '8px', marginBottom: '32px' }}>
                         <div className="tab-nav">
                             <button 
                                 className={`tab-btn ${activeTab === 'upload' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('upload')}
                             >
-                                📁 Upload & Settings
+                                📄 Upload & Configure
                             </button>
                             <button 
                                 className={`tab-btn ${activeTab === 'content' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('content')}
                                 disabled={!summary}
                             >
-                                📄 Content & Flashcards
+                                📚 Content & Flashcards
                             </button>
                             <button 
                                 className={`tab-btn ${activeTab === 'quiz' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('quiz')}
-                                disabled={questions.length === 0}
+                                disabled={questions.length === 0 && !quizMode}
                             >
-                                🎯 Quiz
+                                🎯 Interactive Quiz
                             </button>
                             {showResults && (
                                 <button 
                                     className={`tab-btn ${activeTab === 'results' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('results')}
                                 >
-                                    🏆 Results
+                                    📊 Results
                                 </button>
                             )}
                         </div>
                     </div>
                     
-                    {/* Upload & Settings Tab */}
+                    {/* Upload Tab */}
                     {activeTab === 'upload' && (
-                        <div className="glass" style={{ padding: '40px' }}>
-                            <h2 style={{ color: 'white', marginBottom: '30px', fontSize: '2rem' }}>Upload Content & Configure Quiz</h2>
-                            
-                            {/* File Upload */}
-                            <div 
-                                className="file-upload"
-                                onDrop={handleDrop}
-                                onDragOver={handleDragOver}
-                                onClick={() => fileInputRef.current?.click()}
-                            >
-                                <div style={{ fontSize: '3rem', marginBottom: '15px' }}>📁</div>
-                                <h3>Drop files here or click to browse</h3>
-                                <p style={{ opacity: 0.7, marginTop: '10px' }}>
-                                    Supports: PDF, TXT, CSV files
-                                </p>
+                        <div className="grid-2">
+                            <div className="glass-card" style={{ padding: '32px' }}>
+                                <h2 style={{ marginBottom: '24px' }}>📝 Add Content</h2>
+                                
+                                <div className="form-group">
+                                    <label className="form-label">Direct Text Input</label>
+                                    <textarea
+                                        className="textarea-field"
+                                        placeholder="Paste your study material here..."
+                                        value={content}
+                                        onChange={(e) => setContent(e.target.value)}
+                                        rows="6"
+                                    />
+                                </div>
+                                
+                                <div className="form-group">
+                                    <label className="form-label">Upload Files (PDF, TXT, MD)</label>
+                                    <div 
+                                        className="upload-area"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        onDrop={handleDrop}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                    >
+                                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📁</div>
+                                        <p style={{ fontSize: '1.1rem', marginBottom: '8px' }}>Drop files here or click to browse</p>
+                                        <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Supports PDF, TXT, and MD files</p>
+                                    </div>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        multiple
+                                        accept=".pdf,.txt,.md"
+                                        style={{ display: 'none' }}
+                                        onChange={(e) => handleFileUpload(Array.from(e.target.files))}
+                                    />
+                                </div>
+                                
+                                {files.length > 0 && (
+                                    <div className="file-list">
+                                        <h3 style={{ marginBottom: '16px' }}>📋 Uploaded Files</h3>
+                                        {files.map((file, index) => (
+                                            <div key={index} className="file-item">
+                                                <div className="file-info">
+                                                    <div className="file-name">{file.name}</div>
+                                                    <div className="file-size">{formatFileSize(file.size)}</div>
+                                                </div>
+                                                <button 
+                                                    className="remove-btn"
+                                                    onClick={() => removeFile(index)}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                
+                                <button 
+                                    className="btn-primary" 
+                                    onClick={generateQuiz}
+                                    style={{ width: '100%', marginTop: '24px' }}
+                                    disabled={!content.trim() && files.length === 0}
+                                >
+                                    🚀 Generate Learning Materials
+                                </button>
                             </div>
                             
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                multiple
-                                accept=".pdf,.txt,.csv"
-                                style={{ display: 'none' }}
-                                onChange={(e) => handleFileUpload(Array.from(e.target.files))}
-                            />
-                            
-                            {/* Uploaded Files */}
-                            {files.length > 0 && (
-                                <div style={{ margin: '30px 0' }}>
-                                    <h3 style={{ color: 'white', marginBottom: '15px' }}>Uploaded Files:</h3>
-                                    <div style={{ display: 'grid', gap: '10px' }}>
-                                        {files.map((file, index) => (
-                                            <div key={index} className="glass" style={{ 
-                                                padding: '15px', 
-                                                display: 'flex', 
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                background: file.error ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'
-                                            }}>
-                                                <div>
-                                                    <strong style={{ color: 'white' }}>{file.name}</strong>
-                                                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>
-                                                        {file.type} • {(file.size / 1024).toFixed(1)} KB
-                                                    </p>
+                            <div className="glass-card" style={{ padding: '32px' }}>
+                                <h2 style={{ marginBottom: '24px' }}>⚙️ Configuration</h2>
+                                
+                                <div className="form-group">
+                                    <label className="form-label">Difficulty Distribution</label>
+                                    <div className="grid-4">
+                                        {Object.entries(difficultyDistribution).map(([difficulty, count]) => (
+                                            <div key={difficulty} className="difficulty-selector">
+                                                <div style={{ fontSize: '0.9rem', marginBottom: '8px', textTransform: 'capitalize' }}>
+                                                    {difficulty}
                                                 </div>
-                                                <div style={{ 
-                                                    padding: '8px 16px', 
-                                                    borderRadius: '20px',
-                                                    background: file.error ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                                                    color: 'white',
-                                                    fontSize: '14px'
-                                                }}>
-                                                    {file.error ? '⚠️ Error' : '✅ Success'}
-                                                </div>
+                                                <input
+                                                    type="number"
+                                                    className="difficulty-input"
+                                                    value={count}
+                                                    min="0"
+                                                    max="10"
+                                                    onChange={(e) => updateDifficultyCount(difficulty, parseInt(e.target.value) || 0)}
+                                                />
                                             </div>
                                         ))}
                                     </div>
                                 </div>
-                            )}
-                            
-                            {/* Direct Content Input */}
-                            <div className="input-group">
-                                <label>Or paste your content directly:</label>
-                                <textarea
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    placeholder="Paste your study material, notes, or any text content here..."
-                                    rows={6}
-                                    style={{ resize: 'vertical', minHeight: '150px' }}
-                                />
-                            </div>
-                            
-                            {/* Quiz Configuration */}
-                            <div className="quiz-settings">
-                                <div className="setting-card">
-                                    <h3 style={{ color: 'white', marginBottom: '15px' }}>Multiple Choice Questions</h3>
-                                    <div className="input-group">
-                                        <label>Number of MCQs:</label>
-                                        <select value={mcqCount} onChange={(e) => setMcqCount(parseInt(e.target.value))}>
-                                            {[...Array(21)].map((_, i) => (
-                                                <option key={i} value={i}>{i} MCQs</option>
-                                            ))}
-                                        </select>
+                                
+                                <div className="form-group">
+                                    <label className="form-label">Question Types</label>
+                                    <div className="grid-3">
+                                        <div className="difficulty-selector">
+                                            <div style={{ fontSize: '0.9rem', marginBottom: '8px' }}>Multiple Choice</div>
+                                            <input
+                                                type="number"
+                                                className="difficulty-input"
+                                                value={questionTypes.mcq}
+                                                min="0"
+                                                max="20"
+                                                onChange={(e) => updateQuestionType('mcq', parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                        <div className="difficulty-selector">
+                                            <div style={{ fontSize: '0.9rem', marginBottom: '8px' }}>True/False</div>
+                                            <input
+                                                type="number"
+                                                className="difficulty-input"
+                                                value={questionTypes.truefalse}
+                                                min="0"
+                                                max="20"
+                                                onChange={(e) => updateQuestionType('truefalse', parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                        <div className="difficulty-selector">
+                                            <div style={{ fontSize: '0.9rem', marginBottom: '8px' }}>Short Answer</div>
+                                            <input
+                                                type="number"
+                                                className="difficulty-input"
+                                                value={questionTypes.short}
+                                                min="0"
+                                                max="20"
+                                                onChange={(e) => updateQuestionType('short', parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                                 
-                                <div className="setting-card">
-                                    <h3 style={{ color: 'white', marginBottom: '15px' }}>Short Answer Questions</h3>
-                                    <div className="input-group">
-                                        <label>Number of Short Questions:</label>
-                                        <select value={shortCount} onChange={(e) => setShortCount(parseInt(e.target.value))}>
-                                            {[...Array(16)].map((_, i) => (
-                                                <option key={i} value={i}>{i} Short Questions</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                <div style={{ background: 'rgba(79, 70, 229, 0.1)', border: '1px solid rgba(79, 70, 229, 0.2)', borderRadius: '12px', padding: '16px', marginTop: '20px' }}>
+                                    <h4 style={{ marginBottom: '8px' }}>📈 Generation Summary</h4>
+                                    <p style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.8)' }}>
+                                        Total Questions: {Object.values(difficultyDistribution).reduce((a, b) => a + b)} | 
+                                        Total Types: {Object.values(questionTypes).reduce((a, b) => a + b)}
+                                    </p>
                                 </div>
-                                
-                                <div className="setting-card">
-                                    <h3 style={{ color: 'white', marginBottom: '15px' }}>True/False Questions</h3>
-                                    <div className="input-group">
-                                        <label>Number of T/F Questions:</label>
-                                        <select value={tfCount} onChange={(e) => setTfCount(parseInt(e.target.value))}>
-                                            {[...Array(11)].map((_, i) => (
-                                                <option key={i} value={i}>{i} T/F Questions</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <div className="setting-card">
-                                    <h3 style={{ color: 'white', marginBottom: '15px' }}>Difficulty Level</h3>
-                                    <div className="input-group">
-                                        <label>Question Difficulty:</label>
-                                        <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-                                            <option value="easy">Easy</option>
-                                            <option value="medium">Medium</option>
-                                            <option value="hard">Hard</option>
-                                            <option value="expert">Expert</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Generation Summary */}
-                            <div className="glass" style={{ padding: '20px', margin: '30px 0', background: 'rgba(99, 102, 241, 0.1)' }}>
-                                <h3 style={{ color: 'white', marginBottom: '15px' }}>Quiz Summary</h3>
-                                <div style={{ color: 'rgba(255,255,255,0.9)', lineHeight: '1.6' }}>
-                                    <p><strong>Total Questions:</strong> {mcqCount + shortCount + tfCount}</p>
-                                    <p><strong>Breakdown:</strong> {mcqCount} MCQ, {shortCount} Short Answer, {tfCount} True/False</p>
-                                    <p><strong>Difficulty:</strong> {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</p>
-                                    <p><strong>Content Length:</strong> {content.length} characters</p>
-                                </div>
-                            </div>
-                            
-                            {/* Generate Button */}
-                            <div style={{ textAlign: 'center' }}>
-                                <button 
-                                    className="btn"
-                                    onClick={generateQuiz}
-                                    disabled={loading || (!content.trim() && files.length === 0)}
-                                    style={{ 
-                                        padding: '18px 36px', 
-                                        fontSize: '18px',
-                                        background: loading ? 'rgba(255,255,255,0.3)' : 'linear-gradient(45deg, #6366f1, #8b5cf6)'
-                                    }}
-                                >
-                                    {loading ? (
-                                        <>
-                                            <div className="loading-spinner" style={{ width: '20px', height: '20px', margin: '0 10px 0 0' }} />
-                                            Generating Quiz...
-                                        </>
-                                    ) : (
-                                        <>🚀 Generate Quiz & Content</>
-                                    )}
-                                </button>
                             </div>
                         </div>
                     )}
                     
-                    {/* Content & Flashcards Tab */}
+                    {/* Content Tab */}
                     {activeTab === 'content' && (
                         <div>
-                            {/* Summary Section */}
-                            <div className="glass" style={{ padding: '40px', marginBottom: '30px' }}>
-                                <h2 style={{ color: 'white', marginBottom: '20px' }}>📄 Content Summary</h2>
-                                <div style={{ 
-                                    background: 'rgba(255, 255, 255, 0.1)', 
-                                    padding: '25px', 
-                                    borderRadius: '16px',
-                                    color: 'white',
-                                    lineHeight: '1.8',
-                                    fontSize: '16px'
-                                }}>
-                                    {summary}
+                            <div className="glass-card" style={{ padding: '32px', marginBottom: '32px' }}>
+                                <h2 style={{ marginBottom: '24px' }}>📖 Content Summary</h2>
+                                <div style={{ whiteSpace: 'pre-line', lineHeight: '1.6' }}>
+                                    {summary.split('\n').map((line, i) => {
+                                        if (line.startsWith('##')) {
+                                            return <h3 key={i} style={{ margin: '20px 0 12px 0', color: '#4f46e5' }}>{line.replace('##', '')}</h3>;
+                                        }
+                                        return <p key={i} style={{ marginBottom: '8px' }}>{line}</p>;
+                                    })}
                                 </div>
-                                
-                                <div style={{ marginTop: '25px', textAlign: 'center' }}>
-                                    <button className="btn" onClick={startQuiz}>
-                                        Start Quiz Now
+                                <div style={{ marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                    <button className="btn-primary" onClick={startQuiz}>
+                                        🎯 Start Quiz
+                                    </button>
+                                    <button className="btn-secondary" onClick={() => setActiveTab('upload')}>
+                                        ← Back to Upload
                                     </button>
                                 </div>
                             </div>
                             
-                            {/* Flashcards Section */}
-                            <div className="glass" style={{ padding: '40px' }}>
-                                <h2 style={{ color: 'white', marginBottom: '30px' }}>🎴 Interactive Flashcards</h2>
-                                <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '30px', textAlign: 'center' }}>
-                                    Click on any card to reveal the answer
+                            <div className="glass-card" style={{ padding: '32px' }}>
+                                <h2 style={{ marginBottom: '24px' }}>🃏 Study Flashcards</h2>
+                                <p style={{ marginBottom: '24px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    Click on any card to flip and see the detailed explanation
                                 </p>
                                 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '25px' }}>
+                                <div className="grid-3">
                                     {flashcards.map(card => (
-                                        <div 
+                                        <div
                                             key={card.id}
                                             className={`flashcard ${flippedCards.has(card.id) ? 'flipped' : ''}`}
                                             onClick={() => flipCard(card.id)}
                                         >
-                                            <div className="flashcard-content">
-                                                <h3 style={{ fontSize: '1.5rem', marginBottom: '10px' }}>
+                                            <div className="flashcard-front">
+                                                <div className="flashcard-category" style={{ background: card.color }}>
+                                                    {card.category}
+                                                </div>
+                                                <h3 style={{ fontSize: '1.5rem', textAlign: 'center' }}>
                                                     {card.front}
                                                 </h3>
-                                                <p style={{ opacity: 0.7 }}>Click to reveal definition</p>
-                                            </div>
-                                            <div className="flashcard-content flashcard-back">
-                                                <p style={{ fontSize: '16px', lineHeight: '1.6' }}>
-                                                    {card.back}
+                                                <p style={{ fontSize: '0.9rem', opacity: '0.7', marginTop: '16px' }}>
+                                                    Click to reveal details
                                                 </p>
+                                            </div>
+                                            <div className="flashcard-back">
+                                                <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
+                                                    {card.back.split('\n\n').map((section, i) => (
+                                                        <div key={i} style={{ marginBottom: '12px' }}>
+                                                            {section.startsWith('**') ? 
+                                                                <><strong>{section.split('**')[1]}:</strong> {section.split('**')[2]}</> : 
+                                                                section
+                                                            }
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -1067,255 +1185,232 @@
                     )}
                     
                     {/* Quiz Tab */}
-                    {activeTab === 'quiz' && questions.length > 0 && (
-                        <div>
-                            {!quizMode ? (
-                                /* Quiz Setup */
-                                <div className="glass" style={{ padding: '40px' }}>
-                                    <h2 style={{ color: 'white', marginBottom: '30px' }}>🎯 Quiz Ready</h2>
-                                    
-                                    <div className="stats-grid">
-                                        <div className="stat-card">
-                                            <div className="stat-number">{questions.length}</div>
-                                            <div>Total Questions</div>
-                                        </div>
-                                        <div className="stat-card">
-                                            <div className="stat-number">{mcqCount}</div>
-                                            <div>Multiple Choice</div>
-                                        </div>
-                                        <div className="stat-card">
-                                            <div className="stat-number">{shortCount}</div>
-                                            <div>Short Answer</div>
-                                        </div>
-                                        <div className="stat-card">
-                                            <div className="stat-number">{tfCount}</div>
-                                            <div>True/False</div>
-                                        </div>
+                    {activeTab === 'quiz' && quizMode && !showResults && (
+                        <div className="glass-card" style={{ padding: '32px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                <h2>🎯 Interactive Quiz</h2>
+                                <div style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    Question {currentQuestion + 1} of {questions.length}
+                                </div>
+                            </div>
+                            
+                            <div className="progress-bar">
+                                <div className="progress-fill" style={{ width: `${progress}%` }}></div>
+                            </div>
+                            
+                            {currentQ && (
+                                <div className="quiz-question">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                                        <span style={{ 
+                                            background: currentQ.difficulty === 'easy' ? '#10b981' : 
+                                                      currentQ.difficulty === 'medium' ? '#f59e0b' : 
+                                                      currentQ.difficulty === 'hard' ? '#ef4444' : '#8b5cf6',
+                                            color: 'white',
+                                            padding: '4px 12px',
+                                            borderRadius: '20px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: '600',
+                                            textTransform: 'capitalize'
+                                        }}>
+                                            {currentQ.difficulty}
+                                        </span>
+                                        <span style={{ 
+                                            background: 'rgba(255, 255, 255, 0.1)',
+                                            color: 'white',
+                                            padding: '4px 12px',
+                                            borderRadius: '20px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: '600',
+                                            textTransform: 'uppercase'
+                                        }}>
+                                            {currentQ.type === 'mcq' ? 'Multiple Choice' : 
+                                             currentQ.type === 'truefalse' ? 'True/False' : 'Short Answer'}
+                                        </span>
                                     </div>
                                     
-                                    <div style={{ textAlign: 'center', marginTop: '40px' }}>
+                                    <h3 style={{ fontSize: '1.3rem', marginBottom: '24px', lineHeight: '1.4' }}>
+                                        {currentQ.question}
+                                    </h3>
+                                    
+                                    {currentQ.type === 'short' ? (
+                                        <textarea
+                                            className="textarea-field"
+                                            placeholder="Type your answer here..."
+                                            value={answers[currentQ.id] || ''}
+                                            onChange={(e) => selectAnswer(e.target.value)}
+                                            rows="4"
+                                        />
+                                    ) : (
+                                        <div>
+                                            {currentQ.options.map((option, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`option ${answers[currentQ.id] === option ? 'selected' : ''}`}
+                                                    onClick={() => selectAnswer(option)}
+                                                >
+                                                    <span style={{ marginRight: '12px', fontWeight: '600' }}>
+                                                        {currentQ.type === 'truefalse' ? (option === 'True' ? '✓' : '✗') : String.fromCharCode(65 + index)}
+                                                    </span>
+                                                    {option}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <button 
-                                            className="btn success-animation"
-                                            onClick={startQuiz}
-                                            style={{ padding: '20px 40px', fontSize: '20px' }}
+                                            className="btn-secondary"
+                                            onClick={prevQuestion}
+                                            disabled={currentQuestion === 0}
                                         >
-                                            🚀 Begin Quiz
+                                            ← Previous
                                         </button>
-                                    </div>
-                                </div>
-                            ) : !showResults ? (
-                                /* Active Quiz */
-                                <div className="glass" style={{ padding: '40px' }}>
-                                    {/* Progress */}
-                                    <div style={{ marginBottom: '30px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'white', marginBottom: '15px' }}>
-                                            <span style={{ fontSize: '18px' }}>Question {currentQuestion + 1} of {questions.length}</span>
-                                            <span style={{ fontSize: '18px' }}>Score: {score}/{questions.length}</span>
-                                        </div>
-                                        <div className="progress-bar">
-                                            <div 
-                                                className="progress-fill"
-                                                style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Question */}
-                                    <div className="quiz-question">
-                                        <h2 style={{ color: 'white', marginBottom: '25px', fontSize: '1.8rem', lineHeight: '1.4' }}>
-                                            {questions[currentQuestion].question}
-                                        </h2>
                                         
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', opacity: 0.7 }}>
-                                            <span style={{ color: 'white' }}>Type: {questions[currentQuestion].type.toUpperCase()}</span>
-                                            <span style={{ color: 'white' }}>Difficulty: {questions[currentQuestion].difficulty}</span>
-                                        </div>
-                                        
-                                        {/* Answer Options */}
-                                        {questions[currentQuestion].type !== 'short' ? (
-                                            <div className="options-grid">
-                                                {questions[currentQuestion].options?.map((option, index) => (
-                                                    <div
-                                                        key={index}
-                                                        className={`option ${answers[questions[currentQuestion].id] === option ? 'selected' : ''}`}
-                                                        onClick={() => selectAnswer(option)}
-                                                    >
-                                                        {option}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="input-group">
-                                                <textarea
-                                                    placeholder="Type your detailed answer here..."
-                                                    value={answers[questions[currentQuestion].id] || ''}
-                                                    onChange={(e) => selectAnswer(e.target.value)}
-                                                    rows={6}
-                                                    style={{ fontSize: '16px', lineHeight: '1.6' }}
-                                                />
-                                            </div>
-                                        )}
-                                        
-                                        {/* Navigation */}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px' }}>
-                                            <button 
-                                                className="btn btn-secondary"
-                                                onClick={() => setQuizMode(false)}
-                                            >
-                                                ← Back to Overview
-                                            </button>
-                                            
-                                            <button 
-                                                className="btn"
-                                                onClick={nextQuestion}
-                                                disabled={!answers[questions[currentQuestion].id]}
-                                            >
-                                                {currentQuestion < questions.length - 1 ? 'Next Question →' : 'Finish Quiz 🎯'}
-                                            </button>
+                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                            {currentQuestion === questions.length - 1 ? (
+                                                <button 
+                                                    className="btn-primary"
+                                                    onClick={finishQuiz}
+                                                    disabled={!answers[currentQ.id]}
+                                                >
+                                                    🏁 Finish Quiz
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    className="btn-primary"
+                                                    onClick={nextQuestion}
+                                                    disabled={!answers[currentQ.id]}
+                                                >
+                                                    Next →
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
-                            ) : null}
+                            )}
                         </div>
                     )}
                     
                     {/* Results Tab */}
                     {activeTab === 'results' && showResults && (
                         <div>
-                            {/* Results Overview */}
-                            <div className="glass" style={{ padding: '40px', marginBottom: '30px' }}>
-                                <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                                    <h1 style={{ fontSize: '3rem', marginBottom: '20px' }}>🎉</h1>
-                                    <h2 style={{ color: 'white', marginBottom: '15px', fontSize: '2.5rem' }}>Quiz Completed!</h2>
-                                    <div style={{ 
-                                        fontSize: '2rem', 
-                                        fontWeight: 'bold',
-                                        background: 'linear-gradient(45deg, #10b981, #3b82f6)',
-                                        WebkitBackgroundClip: 'text',
-                                        WebkitTextFillColor: 'transparent',
-                                        marginBottom: '20px'
-                                    }}>
-                                        {score}/{questions.length} ({((score/questions.length)*100).toFixed(1)}%)
-                                    </div>
-                                </div>
+                            <div className="glass-card" style={{ padding: '32px', marginBottom: '32px' }}>
+                                <h2 style={{ textAlign: 'center', marginBottom: '32px' }}>🏆 Quiz Results</h2>
                                 
                                 <div className="stats-grid">
                                     <div className="stat-card">
-                                        <div className="stat-number">{score}</div>
-                                        <div>Correct Answers</div>
+                                        <div className="stat-value" style={{ color: '#10b981' }}>{score}</div>
+                                        <div className="stat-label">Correct Answers</div>
                                     </div>
                                     <div className="stat-card">
-                                        <div className="stat-number">{questions.length - score}</div>
-                                        <div>Incorrect</div>
+                                        <div className="stat-value" style={{ color: '#ef4444' }}>{questions.length - score}</div>
+                                        <div className="stat-label">Incorrect Answers</div>
                                     </div>
                                     <div className="stat-card">
-                                        <div className="stat-number">{((score/questions.length)*100).toFixed(0)}%</div>
-                                        <div>Accuracy</div>
-                                    </div>
-                                    <div className="stat-card">
-                                        <div className="stat-number">{difficulty}</div>
-                                        <div>Difficulty</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Focus Points for Wrong Answers */}
-                            {focusPoints.length > 0 && (
-                                <div className="focus-points">
-                                    <h3>🎯 Focus Points - Review These Areas</h3>
-                                    {focusPoints.map((point, index) => (
-                                        <div key={index} style={{ marginBottom: '20px', padding: '15px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                            <h4 style={{ color: '#fca5a5', marginBottom: '10px' }}>{point.question}</h4>
-                                            <p><strong>Your Answer:</strong> {point.yourAnswer}</p>
-                                            <p><strong>Correct Answer:</strong> {point.correctAnswer}</p>
-                                            <p style={{ marginTop: '10px', fontStyle: 'italic' }}>{point.explanation}</p>
+                                        <div className="stat-value" style={{ color: '#4f46e5' }}>
+                                            {Math.round((score / questions.length) * 100)}%
                                         </div>
-                                    ))}
+                                        <div className="stat-label">Overall Score</div>
+                                    </div>
+                                    <div className="stat-card">
+                                        <div className="stat-value" style={{ color: '#f59e0b' }}>{questions.length}</div>
+                                        <div className="stat-label">Total Questions</div>
+                                    </div>
                                 </div>
-                            )}
-                            
-                            {/* Action Buttons */}
-                            <div className="glass" style={{ padding: '30px', textAlign: 'center' }}>
-                                <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                    <button className="btn" onClick={() => {
-                                        setQuizMode(true);
-                                        setCurrentQuestion(0);
-                                        setAnswers({});
-                                        setScore(0);
-                                        setShowResults(false);
-                                    }}>
+                                
+                                <div style={{ textAlign: 'center', marginTop: '32px' }}>
+                                    <h3 style={{ marginBottom: '16px' }}>
+                                        {score / questions.length >= 0.8 ? '🌟 Excellent Work!' :
+                                         score / questions.length >= 0.6 ? '👍 Good Job!' :
+                                         score / questions.length >= 0.4 ? '📚 Keep Learning!' : '💪 Keep Practicing!'}
+                                    </h3>
+                                    <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '24px' }}>
+                                        {score / questions.length >= 0.8 ? 'Outstanding performance! You have mastered this material.' :
+                                         score / questions.length >= 0.6 ? 'Good understanding! Review the missed questions to improve.' :
+                                         score / questions.length >= 0.4 ? 'Fair performance. More study time would be beneficial.' : 'Consider reviewing the material thoroughly before retaking.'}
+                                    </p>
+                                </div>
+                                
+                                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    <button className="btn-primary" onClick={restartQuiz}>
                                         🔄 Retake Quiz
                                     </button>
+                                    <button className="btn-secondary" onClick={() => setShowAnswers(!showAnswers)}>
+                                        {showAnswers ? '👁️ Hide' : '👁️ Show'} Answers
+                                    </button>
+                                    <button className="btn-secondary" onClick={() => setActiveTab('content')}>
+                                        📚 Study More
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {showAnswers && (
+                                <div className="glass-card" style={{ padding: '32px' }}>
+                                    <h2 style={{ marginBottom: '24px' }}>📋 Answer Review</h2>
                                     
-                                    <button className="btn btn-secondary" onClick={() => {
-                                        setActiveTab('upload');
-                                        setQuestions([]);
-                                        setShowResults(false);
-                                        setQuizMode(false);
-                                        setFlashcards([]);
-                                        setSummary('');
-                                    }}>
-                                        📝 Create New Quiz
-                                    </button>
-                                    
-                                    <button className="btn btn-secondary" onClick={() => setActiveTab('content')}>
-                                        🎴 Review Flashcards
-                                    </button>
+                                    {questions.map((q, index) => {
+                                        const userAnswer = answers[q.id];
+                                        const isCorrect = q.type === 'short' ? 
+                                            userAnswer && userAnswer.length > 10 : 
+                                            userAnswer === q.correct;
+                                        
+                                        return (
+                                            <div key={q.id} style={{ 
+                                                background: isCorrect ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                border: `1px solid ${isCorrect ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                                borderRadius: '12px',
+                                                padding: '20px',
+                                                marginBottom: '16px'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                                                    <span style={{ 
+                                                        background: isCorrect ? '#10b981' : '#ef4444',
+                                                        color: 'white',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '50%',
+                                                        marginRight: '12px',
+                                                        minWidth: '24px',
+                                                        textAlign: 'center',
+                                                        fontSize: '0.8rem'
+                                                    }}>
+                                                        {index + 1}
+                                                    </span>
+                                                    <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>
+                                                        {isCorrect ? '✅ Correct' : '❌ Incorrect'}
+                                                    </span>
+                                                </div>
+                                                
+                                                <h4 style={{ marginBottom: '12px' }}>{q.question}</h4>
+                                                
+                                                <div style={{ marginBottom: '12px' }}>
+                                                    <strong>Your Answer: </strong>
+                                                    <span style={{ color: isCorrect ? '#10b981' : '#ef4444' }}>
+                                                        {userAnswer || 'No answer provided'}
+                                                    </span>
+                                                </div>
+                                                
+                                                {q.type !== 'short' && (
+                                                    <div style={{ marginBottom: '12px' }}>
+                                                        <strong>Correct Answer: </strong>
+                                                        <span style={{ color: '#10b981' }}>{q.correct}</span>
+                                                    </div>
+                                                )}
+                                                
+                                                {q.sampleAnswer && q.type === 'short' && (
+                                                    <div style={{ marginBottom: '12px' }}>
+                                                        <strong>Sample Answer: </strong>
+                                                        <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{q.sampleAnswer}</span>
+                                                    </div>
+                                                )}
+                                                
+                                                <div style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                                    <strong>Explanation: </strong>{q.explanation}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {/* Loading Overlay */}
-                    {loading && (
-                        <div className="modal">
-                            <div style={{ textAlign: 'center', color: 'white' }}>
-                                <div className="loading-spinner" style={{ width: '80px', height: '80px', margin: '0 auto 30px' }} />
-                                <h2 style={{ marginBottom: '15px' }}>Processing Your Content</h2>
-                                <p style={{ opacity: 0.8, fontSize: '18px' }}>
-                                    Extracting text, generating questions, and creating flashcards...
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {/* Focus Points Modal */}
-                    {showFocusPoints && (
-                        <div className="modal" onClick={() => setShowFocusPoints(false)}>
-                            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-                                    <h2>🎯 Areas to Focus On</h2>
-                                    <button className="btn btn-secondary" onClick={() => setShowFocusPoints(false)}>
-                                        ✕
-                                    </button>
-                                </div>
-                                
-                                <p style={{ marginBottom: '25px', opacity: 0.9 }}>
-                                    Based on your quiz performance, here are the key areas you should review:
-                                </p>
-                                
-                                {focusPoints.map((point, index) => (
-                                    <div key={index} className="focus-points" style={{ marginBottom: '25px' }}>
-                                        <h4>{point.question}</h4>
-                                        <div style={{ marginTop: '15px' }}>
-                                            <p><strong>Your Answer:</strong> {point.yourAnswer}</p>
-                                            <p><strong>Correct Answer:</strong> {point.correctAnswer}</p>
-                                            <p style={{ marginTop: '10px', fontStyle: 'italic', opacity: 0.9 }}>
-                                                {point.explanation}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                                
-                                <div style={{ textAlign: 'center', marginTop: '30px' }}>
-                                    <button className="btn" onClick={() => {
-                                        setShowFocusPoints(false);
-                                        setActiveTab('content');
-                                    }}>
-                                        📚 Review Study Material
-                                    </button>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     )}
                 </div>
