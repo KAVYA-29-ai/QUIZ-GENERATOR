@@ -532,6 +532,24 @@
             background: rgba(239, 68, 68, 0.3);
         }
         
+        .error-message {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 16px 0;
+            color: #ef4444;
+        }
+        
+        .success-message {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 16px 0;
+            color: #10b981;
+        }
+        
         @media (max-width: 768px) {
             .container { padding: 16px; }
             .header h1 { font-size: 2.5rem; }
@@ -553,6 +571,8 @@
             const [content, setContent] = useState('');
             const [files, setFiles] = useState([]);
             const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [success, setSuccess] = useState('');
             
             // Difficulty Settings
             const [difficultyDistribution, setDifficultyDistribution] = useState({
@@ -607,6 +627,7 @@
             // File upload handler
             const handleFileUpload = async (uploadedFiles) => {
                 setLoading(true);
+                setError('');
                 const newFiles = [];
                 let combinedContent = content;
                 
@@ -645,6 +666,7 @@
                 setFiles(prev => [...prev, ...newFiles]);
                 setContent(combinedContent);
                 setLoading(false);
+                setSuccess(`Successfully uploaded ${uploadedFiles.length} file(s)`);
             };
             
             // Remove file
@@ -663,28 +685,69 @@
                 }
                 
                 setFiles(newFiles);
+                setSuccess(`Removed file: ${removedFile.name}`);
             };
             
-            // Generate quiz
-            const generateQuiz = () => {
+            // Generate quiz using Gemini API
+            const generateQuiz = async () => {
                 if (!content.trim() && files.length === 0) {
-                    alert('Please add content or upload files first!');
+                    setError('Please add content or upload files first!');
                     return;
                 }
                 
                 setLoading(true);
+                setError('');
                 
-                setTimeout(() => {
-                    const generatedQuestions = generateQuestionsFromContent(content);
-                    setQuestions(generatedQuestions);
-                    generateSummary(content);
-                    generateFlashcards(content);
-                    setActiveTab('content');
+                try {
+                    // Call the Gemini API via a serverless function
+                    const response = await fetch('/.netlify/functions/generate-content', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            content: content,
+                            type: 'questions',
+                            config: {
+                                difficultyDistribution,
+                                questionTypes
+                            }
+                        }),
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        setQuestions(data.data.questions);
+                        setSummary(data.data.summary);
+                        setFlashcards(data.data.flashcards);
+                        setActiveTab('content');
+                        setSuccess('Successfully generated learning materials!');
+                    } else {
+                        setError(data.error || 'Failed to generate content');
+                        // Fallback to mock data if API fails
+                        generateMockData();
+                    }
+                } catch (error) {
+                    console.error('API Error:', error);
+                    setError('API connection failed. Using mock data instead.');
+                    // Fallback to mock data
+                    generateMockData();
+                } finally {
                     setLoading(false);
-                }, 2000);
+                }
             };
             
-            // Enhanced question generation
+            // Fallback mock data generation
+            const generateMockData = () => {
+                const generatedQuestions = generateQuestionsFromContent(content);
+                setQuestions(generatedQuestions);
+                generateSummary(content);
+                generateFlashcards(content);
+                setActiveTab('content');
+            };
+            
+            // Enhanced question generation (fallback)
             const generateQuestionsFromContent = (text) => {
                 const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
                 const words = text.split(/\s+/).filter(w => w.length > 4);
@@ -770,7 +833,7 @@
                 return questions[difficulty];
             };
             
-            // Generate summary
+            // Generate summary (fallback)
             const generateSummary = (text) => {
                 const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 15);
                 const keySentences = sentences.slice(0, 5);
@@ -781,7 +844,7 @@
                 setSummary(summaryText);
             };
             
-            // Generate flashcards with enhanced content
+            // Generate flashcards with enhanced content (fallback)
             const generateFlashcards = (text) => {
                 const words = text.split(/\s+/).filter(w => w.length > 5 && /^[A-Za-z]+$/.test(w));
                 const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
@@ -810,7 +873,7 @@
             // Quiz functions
             const startQuiz = () => {
                 if (questions.length === 0) {
-                    alert('Please generate questions first!');
+                    setError('Please generate questions first!');
                     return;
                 }
                 setQuizMode(true);
@@ -940,180 +1003,190 @@
                         <p>AI-Powered Learning Assistant with Dynamic Difficulty</p>
                     </div>
                     
-                    {/* Navigation */}
-                    <div className="glass-card" style={{ padding: '8px', marginBottom: '32px' }}>
+                    {/* Error and Success Messages */}
+                    {error && (
+                        <div className="error-message glass-card">
+                            <strong>Error:</strong> {error}
+                        </div>
+                    )}
+                    
+                    {success && (
+                        <div className="success-message glass-card">
+                            <strong>Success:</strong> {success}
+                        </div>
+                    )}
+                    
+                    {/* Tab Navigation */}
+                    <div className="glass-card">
                         <div className="tab-nav">
                             <button 
                                 className={`tab-btn ${activeTab === 'upload' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('upload')}
+                                disabled={loading}
                             >
-                                📄 Upload & Configure
+                                Upload Content
+                            </button>
+                            <button 
+                                className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('settings')}
+                                disabled={loading || (files.length === 0 && !content)}
+                            >
+                                Settings
                             </button>
                             <button 
                                 className={`tab-btn ${activeTab === 'content' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('content')}
-                                disabled={!summary}
+                                disabled={loading || questions.length === 0}
                             >
-                                📚 Content & Flashcards
+                                Learning Materials
                             </button>
                             <button 
                                 className={`tab-btn ${activeTab === 'quiz' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('quiz')}
-                                disabled={questions.length === 0 && !quizMode}
+                                onClick={() => quizMode ? setActiveTab('quiz') : startQuiz()}
+                                disabled={loading || questions.length === 0}
                             >
-                                🎯 Interactive Quiz
+                                Take Quiz
                             </button>
-                            {showResults && (
-                                <button 
-                                    className={`tab-btn ${activeTab === 'results' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('results')}
-                                >
-                                    📊 Results
-                                </button>
-                            )}
+                            <button 
+                                className={`tab-btn ${activeTab === 'results' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('results')}
+                                disabled={loading || !showResults}
+                            >
+                                Results
+                            </button>
                         </div>
                     </div>
                     
                     {/* Upload Tab */}
                     {activeTab === 'upload' && (
-                        <div className="grid-2">
-                            <div className="glass-card" style={{ padding: '32px' }}>
-                                <h2 style={{ marginBottom: '24px' }}>📝 Add Content</h2>
-                                
-                                <div className="form-group">
-                                    <label className="form-label">Direct Text Input</label>
-                                    <textarea
-                                        className="textarea-field"
-                                        placeholder="Paste your study material here..."
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        rows="6"
-                                    />
-                                </div>
-                                
-                                <div className="form-group">
-                                    <label className="form-label">Upload Files (PDF, TXT, MD)</label>
-                                    <div 
-                                        className="upload-area"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        onDrop={handleDrop}
-                                        onDragOver={handleDragOver}
-                                        onDragLeave={handleDragLeave}
-                                    >
-                                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📁</div>
-                                        <p style={{ fontSize: '1.1rem', marginBottom: '8px' }}>Drop files here or click to browse</p>
-                                        <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Supports PDF, TXT, and MD files</p>
-                                    </div>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        multiple
-                                        accept=".pdf,.txt,.md"
-                                        style={{ display: 'none' }}
-                                        onChange={(e) => handleFileUpload(Array.from(e.target.files))}
-                                    />
-                                </div>
-                                
-                                {files.length > 0 && (
-                                    <div className="file-list">
-                                        <h3 style={{ marginBottom: '16px' }}>📋 Uploaded Files</h3>
-                                        {files.map((file, index) => (
-                                            <div key={index} className="file-item">
-                                                <div className="file-info">
-                                                    <div className="file-name">{file.name}</div>
-                                                    <div className="file-size">{formatFileSize(file.size)}</div>
-                                                </div>
-                                                <button 
-                                                    className="remove-btn"
-                                                    onClick={() => removeFile(index)}
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                
-                                <button 
-                                    className="btn-primary" 
-                                    onClick={generateQuiz}
-                                    style={{ width: '100%', marginTop: '24px' }}
-                                    disabled={!content.trim() && files.length === 0}
-                                >
-                                    🚀 Generate Learning Materials
-                                </button>
+                        <div className="glass-card" style={{padding: '32px'}}>
+                            <h2 style={{marginBottom: '20px'}}>Upload Study Materials</h2>
+                            
+                            <div 
+                                className="upload-area"
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{marginBottom: '16px'}}>
+                                    <path d="M14 2H6C4.9 2 4.01 2.9 4.01 4L4 20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="rgba(255,255,255,0.1)"/>
+                                    <path d="M14 2V8H20M16 13H8M16 17H8M10 9H8" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                <h3 style={{marginBottom: '8px'}}>Drag & Drop Files Here</h3>
+                                <p style={{color: 'rgba(255,255,255,0.6)'}}>Upload PDFs, text files, or paste content below</p>
                             </div>
                             
-                            <div className="glass-card" style={{ padding: '32px' }}>
-                                <h2 style={{ marginBottom: '24px' }}>⚙️ Configuration</h2>
-                                
-                                <div className="form-group">
-                                    <label className="form-label">Difficulty Distribution</label>
-                                    <div className="grid-4">
-                                        {Object.entries(difficultyDistribution).map(([difficulty, count]) => (
-                                            <div key={difficulty} className="difficulty-selector">
-                                                <div style={{ fontSize: '0.9rem', marginBottom: '8px', textTransform: 'capitalize' }}>
-                                                    {difficulty}
-                                                </div>
-                                                <input
-                                                    type="number"
+                            <input 
+                                type="file" 
+                                ref={fileInputRef}
+                                style={{display: 'none'}}
+                                multiple
+                                accept=".pdf,.txt,.md,text/plain,application/pdf"
+                                onChange={(e) => handleFileUpload(Array.from(e.target.files))}
+                            />
+                            
+                            <div style={{marginTop: '24px'}}>
+                                <h3 style={{marginBottom: '12px'}}>Or Paste Content Directly</h3>
+                                <textarea 
+                                    className="textarea-field"
+                                    placeholder="Paste your study content here..."
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    rows="6"
+                                />
+                            </div>
+                            
+                            {files.length > 0 && (
+                                <div className="file-list">
+                                    <h3 style={{marginBottom: '12px'}}>Uploaded Files</h3>
+                                    {files.map((file, index) => (
+                                        <div key={index} className="file-item glass-card">
+                                            <div className="file-info">
+                                                <span className="file-name">{file.name}</span>
+                                                <span className="file-size">{formatFileSize(file.size)} • {file.type}</span>
+                                            </div>
+                                            <button 
+                                                className="remove-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    removeFile(index);
+                                                }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            
+                            <div style={{marginTop: '24px', textAlign: 'center'}}>
+                                <button 
+                                    className="btn-primary"
+                                    onClick={generateQuiz}
+                                    disabled={loading || (files.length === 0 && !content)}
+                                >
+                                    Generate Learning Materials
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Settings Tab */}
+                    {activeTab === 'settings' && (
+                        <div className="glass-card" style={{padding: '32px'}}>
+                            <h2 style={{marginBottom: '20px'}}>Quiz Configuration</h2>
+                            
+                            <div className="grid-2" style={{marginBottom: '32px'}}>
+                                <div>
+                                    <h3 style={{marginBottom: '16px'}}>Difficulty Distribution</h3>
+                                    {Object.entries(difficultyDistribution).map(([difficulty, count]) => (
+                                        <div key={difficulty} className="difficulty-selector glass-card" style={{marginBottom: '12px'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                                <span style={{textTransform: 'capitalize', fontWeight: '500'}}>{difficulty}</span>
+                                                <input 
+                                                    type="number" 
                                                     className="difficulty-input"
                                                     value={count}
+                                                    onChange={(e) => updateDifficultyCount(difficulty, parseInt(e.target.value) || 0)}
                                                     min="0"
                                                     max="10"
-                                                    onChange={(e) => updateDifficultyCount(difficulty, parseInt(e.target.value) || 0)}
                                                 />
                                             </div>
-                                        ))}
-                                    </div>
+                                        </div>
+                                    ))}
                                 </div>
                                 
-                                <div className="form-group">
-                                    <label className="form-label">Question Types</label>
-                                    <div className="grid-3">
-                                        <div className="difficulty-selector">
-                                            <div style={{ fontSize: '0.9rem', marginBottom: '8px' }}>Multiple Choice</div>
-                                            <input
-                                                type="number"
-                                                className="difficulty-input"
-                                                value={questionTypes.mcq}
-                                                min="0"
-                                                max="20"
-                                                onChange={(e) => updateQuestionType('mcq', parseInt(e.target.value) || 0)}
-                                            />
+                                <div>
+                                    <h3 style={{marginBottom: '16px'}}>Question Types</h3>
+                                    {Object.entries(questionTypes).map(([type, count]) => (
+                                        <div key={type} className="difficulty-selector glass-card" style={{marginBottom: '12px'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                                <span style={{textTransform: 'capitalize', fontWeight: '500'}}>
+                                                    {type === 'mcq' ? 'Multiple Choice' : type === 'truefalse' ? 'True/False' : 'Short Answer'}
+                                                </span>
+                                                <input 
+                                                    type="number" 
+                                                    className="difficulty-input"
+                                                    value={count}
+                                                    onChange={(e) => updateQuestionType(type, parseInt(e.target.value) || 0)}
+                                                    min="0"
+                                                    max="20"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="difficulty-selector">
-                                            <div style={{ fontSize: '0.9rem', marginBottom: '8px' }}>True/False</div>
-                                            <input
-                                                type="number"
-                                                className="difficulty-input"
-                                                value={questionTypes.truefalse}
-                                                min="0"
-                                                max="20"
-                                                onChange={(e) => updateQuestionType('truefalse', parseInt(e.target.value) || 0)}
-                                            />
-                                        </div>
-                                        <div className="difficulty-selector">
-                                            <div style={{ fontSize: '0.9rem', marginBottom: '8px' }}>Short Answer</div>
-                                            <input
-                                                type="number"
-                                                className="difficulty-input"
-                                                value={questionTypes.short}
-                                                min="0"
-                                                max="20"
-                                                onChange={(e) => updateQuestionType('short', parseInt(e.target.value) || 0)}
-                                            />
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
-                                
-                                <div style={{ background: 'rgba(79, 70, 229, 0.1)', border: '1px solid rgba(79, 70, 229, 0.2)', borderRadius: '12px', padding: '16px', marginTop: '20px' }}>
-                                    <h4 style={{ marginBottom: '8px' }}>📈 Generation Summary</h4>
-                                    <p style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.8)' }}>
-                                        Total Questions: {Object.values(difficultyDistribution).reduce((a, b) => a + b)} | 
-                                        Total Types: {Object.values(questionTypes).reduce((a, b) => a + b)}
-                                    </p>
-                                </div>
+                            </div>
+                            
+                            <div style={{textAlign: 'center'}}>
+                                <button 
+                                    className="btn-primary"
+                                    onClick={generateQuiz}
+                                    disabled={loading}
+                                >
+                                    Apply Settings & Generate
+                                </button>
                             </div>
                         </div>
                     )}
@@ -1121,294 +1194,242 @@
                     {/* Content Tab */}
                     {activeTab === 'content' && (
                         <div>
-                            <div className="glass-card" style={{ padding: '32px', marginBottom: '32px' }}>
-                                <h2 style={{ marginBottom: '24px' }}>📖 Content Summary</h2>
-                                <div style={{ whiteSpace: 'pre-line', lineHeight: '1.6' }}>
-                                    {summary.split('\n').map((line, i) => {
-                                        if (line.startsWith('##')) {
-                                            return <h3 key={i} style={{ margin: '20px 0 12px 0', color: '#4f46e5' }}>{line.replace('##', '')}</h3>;
-                                        }
-                                        return <p key={i} style={{ marginBottom: '8px' }}>{line}</p>;
-                                    })}
-                                </div>
-                                <div style={{ marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                    <button className="btn-primary" onClick={startQuiz}>
-                                        🎯 Start Quiz
-                                    </button>
-                                    <button className="btn-secondary" onClick={() => setActiveTab('upload')}>
-                                        ← Back to Upload
-                                    </button>
+                            <div className="glass-card" style={{padding: '32px', marginBottom: '24px'}}>
+                                <h2 style={{marginBottom: '20px'}}>Content Summary</h2>
+                                <div style={{whiteSpace: 'pre-wrap', lineHeight: '1.6'}}>
+                                    {summary || 'No summary available. Please generate content first.'}
                                 </div>
                             </div>
                             
-                            <div className="glass-card" style={{ padding: '32px' }}>
-                                <h2 style={{ marginBottom: '24px' }}>🃏 Study Flashcards</h2>
-                                <p style={{ marginBottom: '24px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    Click on any card to flip and see the detailed explanation
-                                </p>
-                                
-                                <div className="grid-3">
-                                    {flashcards.map(card => (
-                                        <div
-                                            key={card.id}
+                            <h2 style={{marginBottom: '16px'}}>Flashcards</h2>
+                            <div className="grid-3">
+                                {flashcards.length > 0 ? (
+                                    flashcards.map(card => (
+                                        <div 
+                                            key={card.id} 
                                             className={`flashcard ${flippedCards.has(card.id) ? 'flipped' : ''}`}
                                             onClick={() => flipCard(card.id)}
                                         >
                                             <div className="flashcard-front">
-                                                <div className="flashcard-category" style={{ background: card.color }}>
+                                                <span className="flashcard-category" style={{backgroundColor: card.color}}>
                                                     {card.category}
-                                                </div>
-                                                <h3 style={{ fontSize: '1.5rem', textAlign: 'center' }}>
-                                                    {card.front}
-                                                </h3>
-                                                <p style={{ fontSize: '0.9rem', opacity: '0.7', marginTop: '16px' }}>
-                                                    Click to reveal details
-                                                </p>
+                                                </span>
+                                                <h3>{card.front}</h3>
+                                                <p style={{marginTop: '12px', color: 'rgba(255,255,255,0.7)'}}>Click to flip</p>
                                             </div>
                                             <div className="flashcard-back">
-                                                <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
-                                                    {card.back.split('\n\n').map((section, i) => (
-                                                        <div key={i} style={{ marginBottom: '12px' }}>
-                                                            {section.startsWith('**') ? 
-                                                                <><strong>{section.split('**')[1]}:</strong> {section.split('**')[2]}</> : 
-                                                                section
-                                                            }
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                <div style={{whiteSpace: 'pre-wrap', fontSize: '14px'}} dangerouslySetInnerHTML={{__html: card.back.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}}></div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    ))
+                                ) : (
+                                    <p>No flashcards available. Please generate content first.</p>
+                                )}
+                            </div>
+                            
+                            <div style={{textAlign: 'center', marginTop: '32px'}}>
+                                <button className="btn-primary" onClick={startQuiz}>
+                                    Start Quiz
+                                </button>
                             </div>
                         </div>
                     )}
                     
                     {/* Quiz Tab */}
-                    {activeTab === 'quiz' && quizMode && !showResults && (
-                        <div className="glass-card" style={{ padding: '32px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                <h2>🎯 Interactive Quiz</h2>
-                                <div style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    Question {currentQuestion + 1} of {questions.length}
-                                </div>
-                            </div>
-                            
-                            <div className="progress-bar">
-                                <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-                            </div>
-                            
-                            {currentQ && (
-                                <div className="quiz-question">
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                                        <span style={{ 
-                                            background: currentQ.difficulty === 'easy' ? '#10b981' : 
-                                                      currentQ.difficulty === 'medium' ? '#f59e0b' : 
-                                                      currentQ.difficulty === 'hard' ? '#ef4444' : '#8b5cf6',
-                                            color: 'white',
-                                            padding: '4px 12px',
-                                            borderRadius: '20px',
-                                            fontSize: '0.8rem',
-                                            fontWeight: '600',
-                                            textTransform: 'capitalize'
-                                        }}>
-                                            {currentQ.difficulty}
+                    {activeTab === 'quiz' && quizMode && (
+                        <div className="glass-card" style={{padding: '32px'}}>
+                            {currentQ ? (
+                                <>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+                                        <span style={{color: 'rgba(255,255,255,0.7)'}}>
+                                            Question {currentQuestion + 1} of {questions.length}
                                         </span>
-                                        <span style={{ 
-                                            background: 'rgba(255, 255, 255, 0.1)',
-                                            color: 'white',
-                                            padding: '4px 12px',
-                                            borderRadius: '20px',
-                                            fontSize: '0.8rem',
-                                            fontWeight: '600',
-                                            textTransform: 'uppercase'
-                                        }}>
-                                            {currentQ.type === 'mcq' ? 'Multiple Choice' : 
-                                             currentQ.type === 'truefalse' ? 'True/False' : 'Short Answer'}
+                                        <span style={{textTransform: 'capitalize', padding: '4px 12px', borderRadius: '20px', background: 'rgba(255,255,255,0.1)', fontSize: '12px'}}>
+                                            {currentQ.difficulty}
                                         </span>
                                     </div>
                                     
-                                    <h3 style={{ fontSize: '1.3rem', marginBottom: '24px', lineHeight: '1.4' }}>
-                                        {currentQ.question}
-                                    </h3>
+                                    <div className="progress-bar">
+                                        <div className="progress-fill" style={{width: `${progress}%`}}></div>
+                                    </div>
                                     
-                                    {currentQ.type === 'short' ? (
-                                        <textarea
-                                            className="textarea-field"
-                                            placeholder="Type your answer here..."
-                                            value={answers[currentQ.id] || ''}
-                                            onChange={(e) => selectAnswer(e.target.value)}
-                                            rows="4"
-                                        />
-                                    ) : (
-                                        <div>
-                                            {currentQ.options.map((option, index) => (
-                                                <div
-                                                    key={index}
-                                                    className={`option ${answers[currentQ.id] === option ? 'selected' : ''}`}
-                                                    onClick={() => selectAnswer(option)}
-                                                >
-                                                    <span style={{ marginRight: '12px', fontWeight: '600' }}>
-                                                        {currentQ.type === 'truefalse' ? (option === 'True' ? '✓' : '✗') : String.fromCharCode(65 + index)}
-                                                    </span>
-                                                    {option}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    <div className="quiz-question">
+                                        <h3 style={{marginBottom: '20px'}}>{currentQ.question}</h3>
+                                        
+                                        {currentQ.type === 'mcq' && (
+                                            <div>
+                                                {currentQ.options.map((option, index) => {
+                                                    const optionLetter = String.fromCharCode(65 + index);
+                                                    const isSelected = answers[currentQ.id] === optionLetter;
+                                                    return (
+                                                        <div 
+                                                            key={index}
+                                                            className={`option ${isSelected ? 'selected' : ''}`}
+                                                            onClick={() => selectAnswer(optionLetter)}
+                                                        >
+                                                            <span style={{marginRight: '12px', fontWeight: 'bold'}}>{optionLetter}.</span>
+                                                            {option}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        
+                                        {currentQ.type === 'truefalse' && (
+                                            <div>
+                                                {currentQ.options.map((option, index) => {
+                                                    const isSelected = answers[currentQ.id] === option;
+                                                    return (
+                                                        <div 
+                                                            key={index}
+                                                            className={`option ${isSelected ? 'selected' : ''}`}
+                                                            onClick={() => selectAnswer(option)}
+                                                        >
+                                                            {option}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        
+                                        {currentQ.type === 'short' && (
+                                            <textarea 
+                                                className="textarea-field"
+                                                placeholder="Type your answer here..."
+                                                value={answers[currentQ.id] || ''}
+                                                onChange={(e) => selectAnswer(e.target.value)}
+                                                rows="4"
+                                            />
+                                        )}
+                                    </div>
                                     
-                                    <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
                                         <button 
                                             className="btn-secondary"
                                             onClick={prevQuestion}
                                             disabled={currentQuestion === 0}
                                         >
-                                            ← Previous
+                                            Previous
                                         </button>
-                                        
-                                        <div style={{ display: 'flex', gap: '12px' }}>
-                                            {currentQuestion === questions.length - 1 ? (
-                                                <button 
-                                                    className="btn-primary"
-                                                    onClick={finishQuiz}
-                                                    disabled={!answers[currentQ.id]}
-                                                >
-                                                    🏁 Finish Quiz
-                                                </button>
-                                            ) : (
-                                                <button 
-                                                    className="btn-primary"
-                                                    onClick={nextQuestion}
-                                                    disabled={!answers[currentQ.id]}
-                                                >
-                                                    Next →
-                                                </button>
-                                            )}
-                                        </div>
+                                        <button 
+                                            className="btn-primary"
+                                            onClick={nextQuestion}
+                                        >
+                                            {currentQuestion === questions.length - 1 ? 'Finish Quiz' : 'Next Question'}
+                                        </button>
                                     </div>
-                                </div>
+                                </>
+                            ) : (
+                                <p>No questions available. Please generate content first.</p>
                             )}
                         </div>
                     )}
                     
                     {/* Results Tab */}
                     {activeTab === 'results' && showResults && (
-                        <div>
-                            <div className="glass-card" style={{ padding: '32px', marginBottom: '32px' }}>
-                                <h2 style={{ textAlign: 'center', marginBottom: '32px' }}>🏆 Quiz Results</h2>
-                                
-                                <div className="stats-grid">
-                                    <div className="stat-card">
-                                        <div className="stat-value" style={{ color: '#10b981' }}>{score}</div>
-                                        <div className="stat-label">Correct Answers</div>
-                                    </div>
-                                    <div className="stat-card">
-                                        <div className="stat-value" style={{ color: '#ef4444' }}>{questions.length - score}</div>
-                                        <div className="stat-label">Incorrect Answers</div>
-                                    </div>
-                                    <div className="stat-card">
-                                        <div className="stat-value" style={{ color: '#4f46e5' }}>
-                                            {Math.round((score / questions.length) * 100)}%
-                                        </div>
-                                        <div className="stat-label">Overall Score</div>
-                                    </div>
-                                    <div className="stat-card">
-                                        <div className="stat-value" style={{ color: '#f59e0b' }}>{questions.length}</div>
-                                        <div className="stat-label">Total Questions</div>
-                                    </div>
+                        <div className="glass-card" style={{padding: '32px'}}>
+                            <h2 style={{marginBottom: '20px', textAlign: 'center'}}>Quiz Results</h2>
+                            
+                            <div className="stats-grid">
+                                <div className="stat-card glass-card">
+                                    <div className="stat-value">{score}/{questions.length}</div>
+                                    <div className="stat-label">Score</div>
                                 </div>
-                                
-                                <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                                    <h3 style={{ marginBottom: '16px' }}>
-                                        {score / questions.length >= 0.8 ? '🌟 Excellent Work!' :
-                                         score / questions.length >= 0.6 ? '👍 Good Job!' :
-                                         score / questions.length >= 0.4 ? '📚 Keep Learning!' : '💪 Keep Practicing!'}
-                                    </h3>
-                                    <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '24px' }}>
-                                        {score / questions.length >= 0.8 ? 'Outstanding performance! You have mastered this material.' :
-                                         score / questions.length >= 0.6 ? 'Good understanding! Review the missed questions to improve.' :
-                                         score / questions.length >= 0.4 ? 'Fair performance. More study time would be beneficial.' : 'Consider reviewing the material thoroughly before retaking.'}
-                                    </p>
+                                <div className="stat-card glass-card">
+                                    <div className="stat-value">{Math.round((score / questions.length) * 100)}%</div>
+                                    <div className="stat-label">Percentage</div>
                                 </div>
-                                
-                                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                    <button className="btn-primary" onClick={restartQuiz}>
-                                        🔄 Retake Quiz
-                                    </button>
-                                    <button className="btn-secondary" onClick={() => setShowAnswers(!showAnswers)}>
-                                        {showAnswers ? '👁️ Hide' : '👁️ Show'} Answers
-                                    </button>
-                                    <button className="btn-secondary" onClick={() => setActiveTab('content')}>
-                                        📚 Study More
-                                    </button>
+                                <div className="stat-card glass-card">
+                                    <div className="stat-value">
+                                        {score === questions.length ? 'Perfect!' : 
+                                         score >= questions.length * 0.7 ? 'Great Job!' : 
+                                         score >= questions.length * 0.5 ? 'Good Effort!' : 'Keep Practicing!'}
+                                    </div>
+                                    <div className="stat-label">Performance</div>
                                 </div>
                             </div>
                             
+                            <div style={{textAlign: 'center', marginTop: '32px'}}>
+                                <button 
+                                    className="btn-primary"
+                                    onClick={restartQuiz}
+                                    style={{marginRight: '12px'}}
+                                >
+                                    Try Again
+                                </button>
+                                <button 
+                                    className="btn-secondary"
+                                    onClick={() => setShowAnswers(!showAnswers)}
+                                >
+                                    {showAnswers ? 'Hide Answers' : 'Show Answers'}
+                                </button>
+                            </div>
+                            
                             {showAnswers && (
-                                <div className="glass-card" style={{ padding: '32px' }}>
-                                    <h2 style={{ marginBottom: '24px' }}>📋 Answer Review</h2>
-                                    
-                                    {questions.map((q, index) => {
-                                        const userAnswer = answers[q.id];
-                                        const isCorrect = q.type === 'short' ? 
-                                            userAnswer && userAnswer.length > 10 : 
-                                            userAnswer === q.correct;
-                                        
-                                        return (
-                                            <div key={q.id} style={{ 
-                                                background: isCorrect ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                                border: `1px solid ${isCorrect ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                                                borderRadius: '12px',
-                                                padding: '20px',
-                                                marginBottom: '16px'
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                                                    <span style={{ 
-                                                        background: isCorrect ? '#10b981' : '#ef4444',
-                                                        color: 'white',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '50%',
-                                                        marginRight: '12px',
-                                                        minWidth: '24px',
-                                                        textAlign: 'center',
-                                                        fontSize: '0.8rem'
-                                                    }}>
-                                                        {index + 1}
-                                                    </span>
-                                                    <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>
-                                                        {isCorrect ? '✅ Correct' : '❌ Incorrect'}
-                                                    </span>
+                                <div style={{marginTop: '32px'}}>
+                                    <h3 style={{marginBottom: '16px'}}>Question Review</h3>
+                                    {questions.map((q, index) => (
+                                        <div key={q.id} className="quiz-question">
+                                            <h4 style={{marginBottom: '12px'}}>Q{index + 1}: {q.question}</h4>
+                                            
+                                            {q.type === 'mcq' && (
+                                                <div>
+                                                    {q.options.map((option, optIndex) => {
+                                                        const optionLetter = String.fromCharCode(65 + optIndex);
+                                                        const isCorrect = optionLetter === q.correct;
+                                                        const isSelected = answers[q.id] === optionLetter;
+                                                        
+                                                        return (
+                                                            <div 
+                                                                key={optIndex}
+                                                                className={`option ${isCorrect ? 'correct' : isSelected ? 'incorrect' : ''}`}
+                                                            >
+                                                                <span style={{marginRight: '12px', fontWeight: 'bold'}}>{optionLetter}.</span>
+                                                                {option}
+                                                                {isCorrect && <span style={{marginLeft: '8px', color: '#10b981'}}>✓ Correct</span>}
+                                                                {!isCorrect && isSelected && <span style={{marginLeft: '8px', color: '#ef4444'}}>✗ Your Answer</span>}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                                
-                                                <h4 style={{ marginBottom: '12px' }}>{q.question}</h4>
-                                                
-                                                <div style={{ marginBottom: '12px' }}>
-                                                    <strong>Your Answer: </strong>
-                                                    <span style={{ color: isCorrect ? '#10b981' : '#ef4444' }}>
-                                                        {userAnswer || 'No answer provided'}
-                                                    </span>
+                                            )}
+                                            
+                                            {q.type === 'truefalse' && (
+                                                <div>
+                                                    {q.options.map((option, optIndex) => {
+                                                        const isCorrect = option === q.correct;
+                                                        const isSelected = answers[q.id] === option;
+                                                        
+                                                        return (
+                                                            <div 
+                                                                key={optIndex}
+                                                                className={`option ${isCorrect ? 'correct' : isSelected ? 'incorrect' : ''}`}
+                                                            >
+                                                                {option}
+                                                                {isCorrect && <span style={{marginLeft: '8px', color: '#10b981'}}>✓ Correct</span>}
+                                                                {!isCorrect && isSelected && <span style={{marginLeft: '8px', color: '#ef4444'}}>✗ Your Answer</span>}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                                
-                                                {q.type !== 'short' && (
-                                                    <div style={{ marginBottom: '12px' }}>
-                                                        <strong>Correct Answer: </strong>
-                                                        <span style={{ color: '#10b981' }}>{q.correct}</span>
+                                            )}
+                                            
+                                            {q.type === 'short' && (
+                                                <div>
+                                                    <div style={{marginBottom: '12px'}}>
+                                                        <strong>Your Answer:</strong> {answers[q.id] || 'No answer provided'}
                                                     </div>
-                                                )}
-                                                
-                                                {q.sampleAnswer && q.type === 'short' && (
-                                                    <div style={{ marginBottom: '12px' }}>
-                                                        <strong>Sample Answer: </strong>
-                                                        <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{q.sampleAnswer}</span>
+                                                    <div>
+                                                        <strong>Sample Answer:</strong> {q.sampleAnswer}
                                                     </div>
-                                                )}
-                                                
-                                                <div style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                                    <strong>Explanation: </strong>{q.explanation}
                                                 </div>
+                                            )}
+                                            
+                                            <div style={{marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px'}}>
+                                                <strong>Explanation:</strong> {q.explanation}
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
