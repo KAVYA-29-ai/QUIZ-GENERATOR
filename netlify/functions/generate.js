@@ -80,7 +80,7 @@ exports.handler = async (event, context) => {
               "type": "mcq|truefalse|short",
               "question": "string",
               "options": ["array of options"],
-              "correct": "correct answer",
+              "correct": "A|B|C|D",
               "difficulty": "easy|medium|hard|expert",
               "explanation": "detailed explanation",
               "sampleAnswer": "for short answer questions only"
@@ -135,7 +135,7 @@ exports.handler = async (event, context) => {
           type: q.type || 'mcq',
           question: q.question || 'Sample question',
           options: q.options || ['Option A', 'Option B', 'Option C', 'Option D'],
-          correct: q.correct || 'A',
+          correct: ['A','B','C','D'].includes(q.correct) ? q.correct : 'A',
           difficulty: q.difficulty || 'medium',
           explanation: q.explanation || 'No explanation provided.',
           ...(q.type === 'short' && { sampleAnswer: q.sampleAnswer || 'Sample answer' })
@@ -210,7 +210,7 @@ function generateFallbackContent(content, config) {
               `${keyWord} is an example`,
               `${keyWord} is unrelated to the topic`
             ],
-            correct: 'A',
+            correct: 'A',  // always use letter for MCQ
             difficulty: difficulty,
             explanation: `${keyWord} appears in the content as a key concept that supports the main learning objectives.`
           };
