@@ -1,4 +1,4 @@
-// netlify/functions/generate-content.js
+// netlify/functions/generate.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 exports.handler = async (event, context) => {
