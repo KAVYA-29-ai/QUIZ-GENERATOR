@@ -700,7 +700,7 @@
                 
                 try {
                     // Call the Gemini API via a serverless function
-                    const response = await fetch('/.netlify/functions/generate-content', {
+                    const response = await fetch('/.netlify/functions/generate', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
