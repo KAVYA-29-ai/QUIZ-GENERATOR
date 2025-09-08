@@ -81,5 +81,5 @@ AI Model: Google Gemini 1.5 Flash
 Build Tool: Vite
 
 👨‍💻 Author
-Built with ❤️ by [Your Name]
+Built with ❤️ by Kavya
 Feel free to ⭐ the repo and contribute!
