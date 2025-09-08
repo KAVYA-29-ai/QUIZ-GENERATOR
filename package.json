@@ -1,36 +1,23 @@
 {
-  "name": "quizgen",
+  "name": "quizgen-pro",
   "version": "1.0.0",
-  "description": "AI-powered quiz generator with adaptive difficulty",
-  "main": "src/main.jsx",
+  "description": "AI-Powered Quiz Generator with Netlify Functions",
+  "main": "index.html",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "netlify dev",
+    "build": "echo 'Static site - no build needed'",
+    "deploy": "netlify deploy --prod"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "lucide-react": "^0.263.1",
-    "framer-motion": "^10.16.0",
-    "pdf-parse": "^1.1.1",
-    "papaparse": "^5.4.1",
-    "jspdf": "^2.5.1",
-    "@google/generative-ai": "^0.1.3"
+    "@google/generative-ai": "^0.12.0"
   },
   "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@vitejs/plugin-react": "^4.0.0",
-    "vite": "^4.4.5"
+    "netlify-cli": "^17.0.0"
   },
-  "keywords": [
-    "quiz",
-    "ai",
-    "education",
-    "react",
-    "netlify"
-  ],
-  "author": "QuizGen",
+  "repository": {
+    "type": "git",
+    "url": "your-repo-url"
+  },
+  "author": "Your Name",
   "license": "MIT"
 }
