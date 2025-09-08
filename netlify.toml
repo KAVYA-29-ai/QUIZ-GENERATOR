@@ -1,14 +1,16 @@
 [build]
-  publish = "dist"
-  command = "npm run build"
+  functions = "netlify/functions"
+  publish = "."
 
 [functions]
-  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type"
+    Access-Control-Allow-Methods = "POST, OPTIONS"
 
 [dev]
-  framework = "vite"
+  functions = "netlify/functions"
