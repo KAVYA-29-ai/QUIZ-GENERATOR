@@ -1,1444 +1,193 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuizGen Pro - Enhanced AI Quiz Generator</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3a 25%, #2d1b69 50%, #000000 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 20s ease infinite;
-            min-height: 100vh;
-            overflow-x: hidden;
-            color: #ffffff;
-        }
-        
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .glass-card {
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .glass-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        }
-        
-        .glass-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            padding: 12px 24px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            color: white;
-            padding: 12px 24px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-1px);
-        }
-        
-        .input-field {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 12px 16px;
-            color: white;
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-        
-        .input-field:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-        
-        .input-field::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            animation: fadeInUp 0.8s ease;
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .header h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #ffffff, #e2e8f0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 12px;
-        }
-        
-        .header p {
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .tab-nav {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 32px;
-            padding: 4px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-        }
-        
-        .tab-btn {
-            flex: 1;
-            padding: 12px 16px;
-            background: transparent;
-            border: none;
-            border-radius: 12px;
-            color: rgba(255, 255, 255, 0.7);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-        
-        .tab-btn.active {
-            background: rgba(79, 70, 229, 0.8);
-            color: white;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-        }
-        
-        .tab-btn:hover:not(.active) {
-            background: rgba(255, 255, 255, 0.05);
-            color: rgba(255, 255, 255, 0.9);
-        }
-        
-        .tab-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .upload-area {
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 16px;
-            padding: 48px 24px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.02);
-        }
-        
-        .upload-area:hover {
-            border-color: #4f46e5;
-            background: rgba(79, 70, 229, 0.05);
-        }
-        
-        .upload-area.drag-over {
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.1);
-            transform: scale(1.02);
-        }
-        
-        .flashcard {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            height: 280px;
-            cursor: pointer;
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-style: preserve-3d;
-            position: relative;
-            perspective: 1000px;
-        }
-        
-        .flashcard:hover {
-            transform: translateY(-4px) rotateY(2deg);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .flashcard.flipped .flashcard-front {
-            transform: rotateY(-180deg);
-        }
-        
-        .flashcard.flipped .flashcard-back {
-            transform: rotateY(0deg);
-        }
-        
-        .flashcard-front,
-        .flashcard-back {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            border-radius: 16px;
-            transition: transform 0.6s ease;
-        }
-        
-        .flashcard-front {
-            background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(124, 58, 237, 0.05));
-        }
-        
-        .flashcard-back {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05));
-            transform: rotateY(180deg);
-        }
-        
-        .flashcard-category {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: rgba(79, 70, 229, 0.8);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        
-        .quiz-question {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 32px;
-            margin-bottom: 24px;
-            animation: slideInRight 0.5s ease;
-        }
-        
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        .option {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-        }
-        
-        .option:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateX(4px);
-        }
-        
-        .option.selected {
-            background: rgba(79, 70, 229, 0.2);
-            border-color: #4f46e5;
-        }
-        
-        .option.correct {
-            background: rgba(16, 185, 129, 0.2);
-            border-color: #10b981;
-            animation: correctBounce 0.5s ease;
-        }
-        
-        .option.incorrect {
-            background: rgba(239, 68, 68, 0.2);
-            border-color: #ef4444;
-            animation: incorrectShake 0.5s ease;
-        }
-        
-        @keyframes correctBounce {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-        }
-        
-        @keyframes incorrectShake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-4px); }
-            75% { transform: translateX(4px); }
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 16px 0;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4f46e5, #7c3aed);
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-        
-        .stat-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #4f46e5;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        
-        .grid-3 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-        }
-        
-        .grid-4 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.9);
-        }
-        
-        .difficulty-selector {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
-        }
-        
-        .difficulty-selector:hover {
-            border-color: rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.08);
-        }
-        
-        .difficulty-input {
-            width: 60px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            padding: 8px;
-            color: white;
-            text-align: center;
-            font-weight: 600;
-        }
-        
-        .textarea-field {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 12px 16px;
-            color: white;
-            font-size: 14px;
-            transition: all 0.2s ease;
-            resize: vertical;
-            min-height: 120px;
-            font-family: inherit;
-        }
-        
-        .textarea-field:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-        
-        .file-list {
-            margin-top: 20px;
-        }
-        
-        .file-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .file-info {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .file-name {
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-        
-        .file-size {
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-        
-        .remove-btn {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 6px;
-            color: #ef4444;
-            padding: 4px 8px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .remove-btn:hover {
-            background: rgba(239, 68, 68, 0.3);
-        }
-        
-        .error-message {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 8px;
-            padding: 12px;
-            margin: 16px 0;
-            color: #ef4444;
-        }
-        
-        .success-message {
-            background: rgba(16, 185, 129, 0.2);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 8px;
-            padding: 12px;
-            margin: 16px 0;
-            color: #10b981;
-        }
-        
-        @media (max-width: 768px) {
-            .container { padding: 16px; }
-            .header h1 { font-size: 2.5rem; }
-            .tab-nav { flex-direction: column; }
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .grid-3 { grid-template-columns: 1fr; }
-            .grid-4 { grid-template-columns: repeat(2, 1fr); }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b0b0d" />
+  <title>QuizGen Pro — AI Study Assistant</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="/apple-polish.css" />
 </head>
 <body>
-    <div id="root"></div>
-    
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        
-        const QuizGenPro = () => {
-            const [activeTab, setActiveTab] = useState('upload');
-            const [content, setContent] = useState('');
-            const [files, setFiles] = useState([]);
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState('');
-            const [success, setSuccess] = useState('');
-            
-            // Difficulty Settings
-            const [difficultyDistribution, setDifficultyDistribution] = useState({
-                easy: 3,
-                medium: 4,
-                hard: 2,
-                expert: 1
-            });
-            
-            const [questionTypes, setQuestionTypes] = useState({
-                mcq: 6,
-                short: 2,
-                truefalse: 2
-            });
-            
-            // Quiz State
-            const [questions, setQuestions] = useState([]);
-            const [currentQuestion, setCurrentQuestion] = useState(0);
-            const [answers, setAnswers] = useState({});
-            const [score, setScore] = useState(0);
-            const [showResults, setShowResults] = useState(false);
-            const [quizMode, setQuizMode] = useState(false);
-            const [showAnswers, setShowAnswers] = useState(false);
-            
-            // Content State
-            const [summary, setSummary] = useState('');
-            const [flashcards, setFlashcards] = useState([]);
-            const [flippedCards, setFlippedCards] = useState(new Set());
-            
-            const fileInputRef = useRef(null);
-            
-            // Enhanced PDF text extraction
-            const extractTextFromPDF = async (file) => {
-                try {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                    let fullText = '';
-                    
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        const pageText = textContent.items.map(item => item.str).join(' ');
-                        fullText += pageText + '\n\n';
-                    }
-                    
-                    return fullText.replace(/\s+/g, ' ').trim();
-                } catch (error) {
-                    throw new Error('Failed to extract text from PDF');
-                }
-            };
-            
-            // File upload handler
-            const handleFileUpload = async (uploadedFiles) => {
-                setLoading(true);
-                setError('');
-                const newFiles = [];
-                let combinedContent = content;
-                
-                for (const file of uploadedFiles) {
-                    try {
-                        let fileContent = '';
-                        
-                        if (file.type === 'application/pdf') {
-                            fileContent = await extractTextFromPDF(file);
-                        } else if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-                            fileContent = await file.text();
-                        } else {
-                            throw new Error('Unsupported file type. Please upload PDF or text files.');
-                        }
-                        
-                        newFiles.push({
-                            name: file.name,
-                            type: file.type,
-                            content: fileContent,
-                            size: file.size
-                        });
-                        
-                        combinedContent += '\n\n--- ' + file.name + ' ---\n\n' + fileContent;
-                        
-                    } catch (error) {
-                        newFiles.push({
-                            name: file.name,
-                            type: file.type,
-                            content: `Error reading ${file.name}: ${error.message}`,
-                            size: file.size,
-                            error: true
-                        });
-                    }
-                }
-                
-                setFiles(prev => [...prev, ...newFiles]);
-                setContent(combinedContent);
-                setLoading(false);
-                setSuccess(`Successfully uploaded ${uploadedFiles.length} file(s)`);
-            };
-            
-            // Remove file
-            const removeFile = (index) => {
-                const removedFile = files[index];
-                const newFiles = files.filter((_, i) => i !== index);
-                
-                // Remove file content from combined content
-                const fileMarker = `--- ${removedFile.name} ---`;
-                const contentParts = content.split(fileMarker);
-                if (contentParts.length > 1) {
-                    // Remove the file's content section
-                    const beforeFile = contentParts[0];
-                    const afterFileEnd = contentParts[1].split('--- ').slice(1).join('--- ');
-                    setContent(beforeFile + (afterFileEnd ? '--- ' + afterFileEnd : ''));
-                }
-                
-                setFiles(newFiles);
-                setSuccess(`Removed file: ${removedFile.name}`);
-            };
-            
-            // Generate quiz using Gemini API
-            const generateQuiz = async () => {
-                if (!content.trim() && files.length === 0) {
-                    setError('Please add content or upload files first!');
-                    return;
-                }
-                
-                setLoading(true);
-                setError('');
-                
-                try {
-                    // Call the Gemini API via a serverless function
-                    const response = await fetch('/.netlify/functions/generate', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            content: content,
-                            type: 'questions',
-                            config: {
-                                difficultyDistribution,
-                                questionTypes
-                            }
-                        }),
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        setQuestions(data.data.questions);
-                        setSummary(data.data.summary);
-                        setFlashcards(data.data.flashcards);
-                        setActiveTab('content');
-                        setSuccess('Successfully generated learning materials!');
-                    } else {
-                        setError(data.error || 'Failed to generate content');
-                        // Fallback to mock data if API fails
-                        generateMockData();
-                    }
-                } catch (error) {
-                    console.error('API Error:', error);
-                    setError('API connection failed. Using mock data instead.');
-                    // Fallback to mock data
-                    generateMockData();
-                } finally {
-                    setLoading(false);
-                }
-            };
-            
-            // Fallback mock data generation
-            const generateMockData = () => {
-                const generatedQuestions = generateQuestionsFromContent(content);
-                setQuestions(generatedQuestions);
-                generateSummary(content);
-                generateFlashcards(content);
-                setActiveTab('content');
-            };
-            
-            // Enhanced question generation (fallback)
-            const generateQuestionsFromContent = (text) => {
-                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
-                const words = text.split(/\s+/).filter(w => w.length > 4);
-                const questions = [];
-                let questionId = 1;
-                
-                Object.entries(difficultyDistribution).forEach(([difficulty, count]) => {
-                    Object.entries(questionTypes).forEach(([type, totalCount]) => {
-                        const questionsForDifficulty = Math.ceil((count / Object.values(difficultyDistribution).reduce((a, b) => a + b)) * totalCount);
-                        
-                        for (let i = 0; i < questionsForDifficulty && questionId <= 20; i++) {
-                            const randomSentence = sentences[Math.floor(Math.random() * sentences.length)] || 'Sample content';
-                            const keyWord = words[Math.floor(Math.random() * words.length)] || 'concept';
-                            
-                            let question = {};
-                            
-                            if (type === 'mcq') {
-                                question = {
-                                    id: questionId++,
-                                    type: 'mcq',
-                                    question: generateMCQQuestion(keyWord, difficulty),
-                                    options: generateMCQOptions(keyWord, difficulty),
-                                    correct: 'A',
-                                    difficulty: difficulty,
-                                    explanation: `This relates to "${keyWord}" in the provided content.`
-                                };
-                            } else if (type === 'truefalse') {
-                                const isTrue = Math.random() > 0.5;
-                                question = {
-                                    id: questionId++,
-                                    type: 'truefalse',
-                                    question: `The content discusses "${keyWord}" as a fundamental concept.`,
-                                    options: ['True', 'False'],
-                                    correct: isTrue ? 'True' : 'False',
-                                    difficulty: difficulty,
-                                    explanation: `Based on the analysis of "${keyWord}" in the content.`
-                                };
-                            } else if (type === 'short') {
-                                question = {
-                                    id: questionId++,
-                                    type: 'short',
-                                    question: generateShortQuestion(keyWord, difficulty),
-                                    difficulty: difficulty,
-                                    explanation: `A comprehensive answer should analyze "${keyWord}" with examples.`,
-                                    sampleAnswer: `${keyWord} is a key concept that plays an important role in understanding the subject matter. It connects to other ideas and provides foundational knowledge for further learning.`
-                                };
-                            }
-                            
-                            questions.push(question);
-                        }
-                    });
-                });
-                
-                return questions.slice(0, 15);
-            };
-            
-            const generateMCQQuestion = (keyWord, difficulty) => {
-                const questions = {
-                    easy: `What is "${keyWord}" in the context of this content?`,
-                    medium: `How does "${keyWord}" relate to the main concepts?`,
-                    hard: `Analyze the significance of "${keyWord}" in the material.`,
-                    expert: `Evaluate the implications of "${keyWord}" beyond the given context.`
-                };
-                return questions[difficulty];
-            };
-            
-            const generateMCQOptions = (keyWord, difficulty) => {
-                return [
-                    `A key concept related to ${keyWord}`,
-                    `A supporting detail about ${keyWord}`,
-                    `An example of ${keyWord}`,
-                    `An unrelated term to ${keyWord}`
-                ];
-            };
-            
-            const generateShortQuestion = (keyWord, difficulty) => {
-                const questions = {
-                    easy: `Describe "${keyWord}" based on the content.`,
-                    medium: `Explain how "${keyWord}" connects to other concepts.`,
-                    hard: `Analyze the role of "${keyWord}" in the material.`,
-                    expert: `Critically evaluate "${keyWord}" and its applications.`
-                };
-                return questions[difficulty];
-            };
-            
-            // Generate summary (fallback)
-            const generateSummary = (text) => {
-                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 15);
-                const keySentences = sentences.slice(0, 5);
-                const wordCount = text.split(/\s+/).length;
-                
-                const summaryText = `## Content Overview\n\nThis material contains comprehensive information suitable for learning and assessment. The content has been processed from ${files.length} files with approximately ${wordCount} words.\n\n## Key Points\n\n${keySentences.map((s, i) => `${i + 1}. ${s.trim().substring(0, 100)}...`).join('\n')}\n\n## Analysis\n\nThe content has been analyzed to generate ${Object.values(difficultyDistribution).reduce((a, b) => a + b)} questions across multiple difficulty levels and ${flashcards.length} flashcards for comprehensive learning.`;
-                
-                setSummary(summaryText);
-            };
-            
-            // Generate flashcards with enhanced content (fallback)
-            const generateFlashcards = (text) => {
-                const words = text.split(/\s+/).filter(w => w.length > 5 && /^[A-Za-z]+$/.test(w));
-                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
-                const uniqueWords = [...new Set(words)].slice(0, 15);
-                
-                const cards = uniqueWords.map((word, index) => {
-                    const relevantSentence = sentences.find(s => 
-                        s.toLowerCase().includes(word.toLowerCase())
-                    ) || sentences[index % sentences.length] || 'Related to the study material.';
-                    
-                    const categories = ['Primary Concept', 'Supporting Detail', 'Technical Term', 'Key Process', 'Important Factor'];
-                    const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-                    
-                    return {
-                        id: index + 1,
-                        front: word.charAt(0).toUpperCase() + word.slice(1),
-                        back: `**Definition:** Key concept from the material\n\n**Context:** "${relevantSentence.trim().substring(0, 120)}..."\n\n**Importance:** Essential term for understanding the subject matter.\n\n**Usage:** Appears frequently in the provided content and relates to core learning objectives.`,
-                        category: categories[index % categories.length],
-                        color: colors[index % colors.length]
-                    };
-                });
-                
-                setFlashcards(cards);
-            };
-            
-            // Quiz functions
-            const startQuiz = () => {
-                if (questions.length === 0) {
-                    setError('Please generate questions first!');
-                    return;
-                }
-                setQuizMode(true);
-                setCurrentQuestion(0);
-                setAnswers({});
-                setScore(0);
-                setShowResults(false);
-                setShowAnswers(false);
-                setActiveTab('quiz');
-            };
-            
-            const selectAnswer = (answer) => {
-                setAnswers(prev => ({
-                    ...prev,
-                    [questions[currentQuestion].id]: answer
-                }));
-            };
-            
-            const nextQuestion = () => {
-                if (currentQuestion < questions.length - 1) {
-                    setCurrentQuestion(prev => prev + 1);
-                } else {
-                    finishQuiz();
-                }
-            };
-            
-            const prevQuestion = () => {
-                if (currentQuestion > 0) {
-                    setCurrentQuestion(prev => prev - 1);
-                }
-            };
-            
-            const finishQuiz = () => {
-                let finalScore = 0;
-                questions.forEach(q => {
-                    const userAnswer = answers[q.id];
-                    if (q.type === 'short') {
-                        if (userAnswer && userAnswer.length > 10) finalScore++;
-                    } else {
-                        if (userAnswer === q.correct) finalScore++;
-                    }
-                });
-                setScore(finalScore);
-                setShowResults(true);
-                setActiveTab('results');
-            };
-            
-            const restartQuiz = () => {
-                setCurrentQuestion(0);
-                setAnswers({});
-                setScore(0);
-                setShowResults(false);
-                setShowAnswers(false);
-                setQuizMode(true);
-                setActiveTab('quiz');
-            };
-            
-            // Fixed flashcard flip function
-            const flipCard = (cardId) => {
-                setFlippedCards(prev => {
-                    const newSet = new Set(prev);
-                    if (newSet.has(cardId)) {
-                        newSet.delete(cardId);
-                    } else {
-                        newSet.add(cardId);
-                    }
-                    return newSet;
-                });
-            };
-            
-            // Drag and drop handlers
-            const handleDrop = (e) => {
-                e.preventDefault();
-                e.currentTarget.classList.remove('drag-over');
-                const droppedFiles = Array.from(e.dataTransfer.files);
-                handleFileUpload(droppedFiles);
-            };
-            
-            const handleDragOver = (e) => {
-                e.preventDefault();
-                e.currentTarget.classList.add('drag-over');
-            };
-            
-            const handleDragLeave = (e) => {
-                e.preventDefault();
-                e.currentTarget.classList.remove('drag-over');
-            };
-            
-            const updateDifficultyCount = (difficulty, count) => {
-                setDifficultyDistribution(prev => ({
-                    ...prev,
-                    [difficulty]: Math.max(0, Math.min(10, count))
-                }));
-            };
-            
-            const updateQuestionType = (type, count) => {
-                setQuestionTypes(prev => ({
-                    ...prev,
-                    [type]: Math.max(0, Math.min(20, count))
-                }));
-            };
-            
-            const formatFileSize = (bytes) => {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            };
-            
-            const currentQ = questions[currentQuestion];
-            const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0;
-            
-            return (
-                <div className="container">
-                    {/* Loading Overlay */}
-                    {loading && (
-                        <div className="loading-overlay">
-                            <div className="loading-spinner"></div>
-                            <p>Processing your content...</p>
-                        </div>
-                    )}
-                    
-                    {/* Header */}
-                    <div className="header">
-                        <h1>QuizGen Pro</h1>
-                        <p>AI-Powered Learning Assistant with Dynamic Difficulty</p>
-                    </div>
-                    
-                    {/* Error and Success Messages */}
-                    {error && (
-                        <div className="error-message glass-card">
-                            <strong>Error:</strong> {error}
-                        </div>
-                    )}
-                    
-                    {success && (
-                        <div className="success-message glass-card">
-                            <strong>Success:</strong> {success}
-                        </div>
-                    )}
-                    
-                    {/* Tab Navigation */}
-                    <div className="glass-card">
-                        <div className="tab-nav">
-                            <button 
-                                className={`tab-btn ${activeTab === 'upload' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('upload')}
-                                disabled={loading}
-                            >
-                                Upload Content
-                            </button>
-                            <button 
-                                className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('settings')}
-                                disabled={loading || (files.length === 0 && !content)}
-                            >
-                                Settings
-                            </button>
-                            <button 
-                                className={`tab-btn ${activeTab === 'content' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('content')}
-                                disabled={loading || questions.length === 0}
-                            >
-                                Learning Materials
-                            </button>
-                            <button 
-                                className={`tab-btn ${activeTab === 'quiz' ? 'active' : ''}`}
-                                onClick={() => quizMode ? setActiveTab('quiz') : startQuiz()}
-                                disabled={loading || questions.length === 0}
-                            >
-                                Take Quiz
-                            </button>
-                            <button 
-                                className={`tab-btn ${activeTab === 'results' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('results')}
-                                disabled={loading || !showResults}
-                            >
-                                Results
-                            </button>
-                        </div>
-                    </div>
-                    
-                    {/* Upload Tab */}
-                    {activeTab === 'upload' && (
-                        <div className="glass-card" style={{padding: '32px'}}>
-                            <h2 style={{marginBottom: '20px'}}>Upload Study Materials</h2>
-                            
-                            <div 
-                                className="upload-area"
-                                onDrop={handleDrop}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onClick={() => fileInputRef.current?.click()}
-                            >
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{marginBottom: '16px'}}>
-                                    <path d="M14 2H6C4.9 2 4.01 2.9 4.01 4L4 20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="rgba(255,255,255,0.1)"/>
-                                    <path d="M14 2V8H20M16 13H8M16 17H8M10 9H8" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                                <h3 style={{marginBottom: '8px'}}>Drag & Drop Files Here</h3>
-                                <p style={{color: 'rgba(255,255,255,0.6)'}}>Upload PDFs, text files, or paste content below</p>
-                            </div>
-                            
-                            <input 
-                                type="file" 
-                                ref={fileInputRef}
-                                style={{display: 'none'}}
-                                multiple
-                                accept=".pdf,.txt,.md,text/plain,application/pdf"
-                                onChange={(e) => handleFileUpload(Array.from(e.target.files))}
-                            />
-                            
-                            <div style={{marginTop: '24px'}}>
-                                <h3 style={{marginBottom: '12px'}}>Or Paste Content Directly</h3>
-                                <textarea 
-                                    className="textarea-field"
-                                    placeholder="Paste your study content here..."
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    rows="6"
-                                />
-                            </div>
-                            
-                            {files.length > 0 && (
-                                <div className="file-list">
-                                    <h3 style={{marginBottom: '12px'}}>Uploaded Files</h3>
-                                    {files.map((file, index) => (
-                                        <div key={index} className="file-item glass-card">
-                                            <div className="file-info">
-                                                <span className="file-name">{file.name}</span>
-                                                <span className="file-size">{formatFileSize(file.size)} • {file.type}</span>
-                                            </div>
-                                            <button 
-                                                className="remove-btn"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeFile(index);
-                                                }}
-                                            >
-                                                Remove
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            
-                            <div style={{marginTop: '24px', textAlign: 'center'}}>
-                                <button 
-                                    className="btn-primary"
-                                    onClick={generateQuiz}
-                                    disabled={loading || (files.length === 0 && !content)}
-                                >
-                                    Generate Learning Materials
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {/* Settings Tab */}
-                    {activeTab === 'settings' && (
-                        <div className="glass-card" style={{padding: '32px'}}>
-                            <h2 style={{marginBottom: '20px'}}>Quiz Configuration</h2>
-                            
-                            <div className="grid-2" style={{marginBottom: '32px'}}>
-                                <div>
-                                    <h3 style={{marginBottom: '16px'}}>Difficulty Distribution</h3>
-                                    {Object.entries(difficultyDistribution).map(([difficulty, count]) => (
-                                        <div key={difficulty} className="difficulty-selector glass-card" style={{marginBottom: '12px'}}>
-                                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                                                <span style={{textTransform: 'capitalize', fontWeight: '500'}}>{difficulty}</span>
-                                                <input 
-                                                    type="number" 
-                                                    className="difficulty-input"
-                                                    value={count}
-                                                    onChange={(e) => updateDifficultyCount(difficulty, parseInt(e.target.value) || 0)}
-                                                    min="0"
-                                                    max="10"
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                
-                                <div>
-                                    <h3 style={{marginBottom: '16px'}}>Question Types</h3>
-                                    {Object.entries(questionTypes).map(([type, count]) => (
-                                        <div key={type} className="difficulty-selector glass-card" style={{marginBottom: '12px'}}>
-                                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                                                <span style={{textTransform: 'capitalize', fontWeight: '500'}}>
-                                                    {type === 'mcq' ? 'Multiple Choice' : type === 'truefalse' ? 'True/False' : 'Short Answer'}
-                                                </span>
-                                                <input 
-                                                    type="number" 
-                                                    className="difficulty-input"
-                                                    value={count}
-                                                    onChange={(e) => updateQuestionType(type, parseInt(e.target.value) || 0)}
-                                                    min="0"
-                                                    max="20"
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            
-                            <div style={{textAlign: 'center'}}>
-                                <button 
-                                    className="btn-primary"
-                                    onClick={generateQuiz}
-                                    disabled={loading}
-                                >
-                                    Apply Settings & Generate
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {/* Content Tab */}
-                    {activeTab === 'content' && (
-                        <div>
-                            <div className="glass-card" style={{padding: '32px', marginBottom: '24px'}}>
-                                <h2 style={{marginBottom: '20px'}}>Content Summary</h2>
-                                <div style={{whiteSpace: 'pre-wrap', lineHeight: '1.6'}}>
-                                    {summary || 'No summary available. Please generate content first.'}
-                                </div>
-                            </div>
-                            
-                            <h2 style={{marginBottom: '16px'}}>Flashcards</h2>
-                            <div className="grid-3">
-                                {flashcards.length > 0 ? (
-                                    flashcards.map(card => (
-                                        <div 
-                                            key={card.id} 
-                                            className={`flashcard ${flippedCards.has(card.id) ? 'flipped' : ''}`}
-                                            onClick={() => flipCard(card.id)}
-                                        >
-                                            <div className="flashcard-front">
-                                                <span className="flashcard-category" style={{backgroundColor: card.color}}>
-                                                    {card.category}
-                                                </span>
-                                                <h3>{card.front}</h3>
-                                                <p style={{marginTop: '12px', color: 'rgba(255,255,255,0.7)'}}>Click to flip</p>
-                                            </div>
-                                            <div className="flashcard-back">
-                                                <div style={{whiteSpace: 'pre-wrap', fontSize: '14px'}} dangerouslySetInnerHTML={{__html: card.back.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}}></div>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p>No flashcards available. Please generate content first.</p>
-                                )}
-                            </div>
-                            
-                            <div style={{textAlign: 'center', marginTop: '32px'}}>
-                                <button className="btn-primary" onClick={startQuiz}>
-                                    Start Quiz
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {/* Quiz Tab */}
-                    {activeTab === 'quiz' && quizMode && (
-                        <div className="glass-card" style={{padding: '32px'}}>
-                            {currentQ ? (
-                                <>
-                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-                                        <span style={{color: 'rgba(255,255,255,0.7)'}}>
-                                            Question {currentQuestion + 1} of {questions.length}
-                                        </span>
-                                        <span style={{textTransform: 'capitalize', padding: '4px 12px', borderRadius: '20px', background: 'rgba(255,255,255,0.1)', fontSize: '12px'}}>
-                                            {currentQ.difficulty}
-                                        </span>
-                                    </div>
-                                    
-                                    <div className="progress-bar">
-                                        <div className="progress-fill" style={{width: `${progress}%`}}></div>
-                                    </div>
-                                    
-                                    <div className="quiz-question">
-                                        <h3 style={{marginBottom: '20px'}}>{currentQ.question}</h3>
-                                        
-                                        {currentQ.type === 'mcq' && (
-                                            <div>
-                                                {currentQ.options.map((option, index) => {
-                                                    const optionLetter = String.fromCharCode(65 + index);
-                                                    const isSelected = answers[currentQ.id] === optionLetter;
-                                                    return (
-                                                        <div 
-                                                            key={index}
-                                                            className={`option ${isSelected ? 'selected' : ''}`}
-                                                            onClick={() => selectAnswer(optionLetter)}
-                                                        >
-                                                            <span style={{marginRight: '12px', fontWeight: 'bold'}}>{optionLetter}.</span>
-                                                            {option}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                        
-                                        {currentQ.type === 'truefalse' && (
-                                            <div>
-                                                {currentQ.options.map((option, index) => {
-                                                    const isSelected = answers[currentQ.id] === option;
-                                                    return (
-                                                        <div 
-                                                            key={index}
-                                                            className={`option ${isSelected ? 'selected' : ''}`}
-                                                            onClick={() => selectAnswer(option)}
-                                                        >
-                                                            {option}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                        
-                                        {currentQ.type === 'short' && (
-                                            <textarea 
-                                                className="textarea-field"
-                                                placeholder="Type your answer here..."
-                                                value={answers[currentQ.id] || ''}
-                                                onChange={(e) => selectAnswer(e.target.value)}
-                                                rows="4"
-                                            />
-                                        )}
-                                    </div>
-                                    
-                                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                                        <button 
-                                            className="btn-secondary"
-                                            onClick={prevQuestion}
-                                            disabled={currentQuestion === 0}
-                                        >
-                                            Previous
-                                        </button>
-                                        <button 
-                                            className="btn-primary"
-                                            onClick={nextQuestion}
-                                        >
-                                            {currentQuestion === questions.length - 1 ? 'Finish Quiz' : 'Next Question'}
-                                        </button>
-                                    </div>
-                                </>
-                            ) : (
-                                <p>No questions available. Please generate content first.</p>
-                            )}
-                        </div>
-                    )}
-                    
-                    {/* Results Tab */}
-                    {activeTab === 'results' && showResults && (
-                        <div className="glass-card" style={{padding: '32px'}}>
-                            <h2 style={{marginBottom: '20px', textAlign: 'center'}}>Quiz Results</h2>
-                            
-                            <div className="stats-grid">
-                                <div className="stat-card glass-card">
-                                    <div className="stat-value">{score}/{questions.length}</div>
-                                    <div className="stat-label">Score</div>
-                                </div>
-                                <div className="stat-card glass-card">
-                                    <div className="stat-value">{Math.round((score / questions.length) * 100)}%</div>
-                                    <div className="stat-label">Percentage</div>
-                                </div>
-                                <div className="stat-card glass-card">
-                                    <div className="stat-value">
-                                        {score === questions.length ? 'Perfect!' : 
-                                         score >= questions.length * 0.7 ? 'Great Job!' : 
-                                         score >= questions.length * 0.5 ? 'Good Effort!' : 'Keep Practicing!'}
-                                    </div>
-                                    <div className="stat-label">Performance</div>
-                                </div>
-                            </div>
-                            
-                            <div style={{textAlign: 'center', marginTop: '32px'}}>
-                                <button 
-                                    className="btn-primary"
-                                    onClick={restartQuiz}
-                                    style={{marginRight: '12px'}}
-                                >
-                                    Try Again
-                                </button>
-                                <button 
-                                    className="btn-secondary"
-                                    onClick={() => setShowAnswers(!showAnswers)}
-                                >
-                                    {showAnswers ? 'Hide Answers' : 'Show Answers'}
-                                </button>
-                            </div>
-                            
-                            {showAnswers && (
-                                <div style={{marginTop: '32px'}}>
-                                    <h3 style={{marginBottom: '16px'}}>Question Review</h3>
-                                    {questions.map((q, index) => (
-                                        <div key={q.id} className="quiz-question">
-                                            <h4 style={{marginBottom: '12px'}}>Q{index + 1}: {q.question}</h4>
-                                            
-                                            {q.type === 'mcq' && (
-                                                <div>
-                                                    {q.options.map((option, optIndex) => {
-                                                        const optionLetter = String.fromCharCode(65 + optIndex);
-                                                        const isCorrect = optionLetter === q.correct;
-                                                        const isSelected = answers[q.id] === optionLetter;
-                                                        
-                                                        return (
-                                                            <div 
-                                                                key={optIndex}
-                                                                className={`option ${isCorrect ? 'correct' : isSelected ? 'incorrect' : ''}`}
-                                                            >
-                                                                <span style={{marginRight: '12px', fontWeight: 'bold'}}>{optionLetter}.</span>
-                                                                {option}
-                                                                {isCorrect && <span style={{marginLeft: '8px', color: '#10b981'}}>✓ Correct</span>}
-                                                                {!isCorrect && isSelected && <span style={{marginLeft: '8px', color: '#ef4444'}}>✗ Your Answer</span>}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                            
-                                            {q.type === 'truefalse' && (
-                                                <div>
-                                                    {q.options.map((option, optIndex) => {
-                                                        const isCorrect = option === q.correct;
-                                                        const isSelected = answers[q.id] === option;
-                                                        
-                                                        return (
-                                                            <div 
-                                                                key={optIndex}
-                                                                className={`option ${isCorrect ? 'correct' : isSelected ? 'incorrect' : ''}`}
-                                                            >
-                                                                {option}
-                                                                {isCorrect && <span style={{marginLeft: '8px', color: '#10b981'}}>✓ Correct</span>}
-                                                                {!isCorrect && isSelected && <span style={{marginLeft: '8px', color: '#ef4444'}}>✗ Your Answer</span>}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                            
-                                            {q.type === 'short' && (
-                                                <div>
-                                                    <div style={{marginBottom: '12px'}}>
-                                                        <strong>Your Answer:</strong> {answers[q.id] || 'No answer provided'}
-                                                    </div>
-                                                    <div>
-                                                        <strong>Sample Answer:</strong> {q.sampleAnswer}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            
-                                            <div style={{marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px'}}>
-                                                <strong>Explanation:</strong> {q.explanation}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            );
-        };
-        
-        ReactDOM.render(<QuizGenPro />, document.getElementById('root'));
-    </script>
+  <div id="root"></div>
+  <script type="text/babel">
+    const {useEffect, useMemo, useRef, useState} = React;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const DEFAULT_TYPES = {mcq: 5, truefalse: 3, short: 2};
+    const DEFAULT_DIFFICULTY = {easy: 3, medium: 4, hard: 2, expert: 1};
+
+    const normalizeQuestion = (q, i) => {
+      const type = q.type === 'tf' ? 'truefalse' : q.type;
+      return {
+        id: q.id ?? i + 1,
+        type: ['mcq','truefalse','short'].includes(type) ? type : 'mcq',
+        question: q.question || `Question ${i + 1}`,
+        options: type === 'mcq' ? (Array.isArray(q.options) && q.options.length === 4 ? q.options : ['Option A','Option B','Option C','Option D']) : type === 'truefalse' ? ['True','False'] : [],
+        correct: q.correct || 'A',
+        answer: q.answer || '',
+        difficulty: q.difficulty || 'medium',
+        explanation: q.explanation || 'Review the source material for the reasoning.',
+        sampleAnswer: q.sampleAnswer || ''
+      };
+    };
+
+    function App(){
+      const [tab,setTab] = useState('generate');
+      const [content,setContent] = useState(localStorage.getItem('quizgen_content') || '');
+      const [files,setFiles] = useState([]);
+      const [questions,setQuestions] = useState(()=>JSON.parse(localStorage.getItem('quizgen_questions') || '[]'));
+      const [flashcards,setFlashcards] = useState(()=>JSON.parse(localStorage.getItem('quizgen_flashcards') || '[]'));
+      const [summary,setSummary] = useState(localStorage.getItem('quizgen_summary') || '');
+      const [types,setTypes] = useState(DEFAULT_TYPES);
+      const [difficulty,setDifficulty] = useState(DEFAULT_DIFFICULTY);
+      const [loading,setLoading] = useState(false);
+      const [status,setStatus] = useState('');
+      const [error,setError] = useState('');
+      const [drag,setDrag] = useState(false);
+      const [flipped,setFlipped] = useState(new Set());
+      const [quizIndex,setQuizIndex] = useState(0);
+      const [answers,setAnswers] = useState({});
+      const [score,setScore] = useState(null);
+      const fileRef = useRef(null);
+
+      useEffect(()=>localStorage.setItem('quizgen_content',content),[content]);
+      useEffect(()=>localStorage.setItem('quizgen_questions',JSON.stringify(questions)),[questions]);
+      useEffect(()=>localStorage.setItem('quizgen_flashcards',JSON.stringify(flashcards)),[flashcards]);
+      useEffect(()=>localStorage.setItem('quizgen_summary',summary),[summary]);
+
+      const totalQuestions = Object.values(types).reduce((a,b)=>a+b,0);
+      const current = questions[quizIndex];
+      const progress = questions.length ? Math.round(((quizIndex+1)/questions.length)*100) : 0;
+
+      const readPdf = async(file)=>{
+        const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+        let text='';
+        for(let p=1;p<=pdf.numPages;p++){
+          const page=await pdf.getPage(p);
+          const data=await page.getTextContent();
+          text += data.items.map(x=>x.str).join(' ') + '\n\n';
+        }
+        return text.trim();
+      };
+
+      const handleFiles = async(list)=>{
+        setError(''); setLoading(true);
+        try{
+          let combined=content; const accepted=[];
+          for(const file of list){
+            if(!/\.(pdf|txt|md)$/i.test(file.name)) throw new Error(`${file.name}: PDF, TXT or MD only.`);
+            const text=file.type==='application/pdf' || /\.pdf$/i.test(file.name) ? await readPdf(file) : await file.text();
+            combined += `${combined ? '\n\n' : ''}--- ${file.name} ---\n${text}`;
+            accepted.push({name:file.name,size:file.size});
+          }
+          setContent(combined.slice(0,30000)); setFiles(prev=>[...prev,...accepted]);
+          setStatus(`${accepted.length} file${accepted.length===1?'':'s'} loaded.`);
+        }catch(e){setError(e.message)}finally{setLoading(false)}
+      };
+
+      const generate = async()=>{
+        if(!content.trim()){setError('Add text or upload a file first.');return}
+        setLoading(true); setError(''); setStatus('Generating with Gemini…');
+        try{
+          const res=await fetch('/.netlify/functions/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content,type:'questions',config:{questionTypes:types,difficultyDistribution:difficulty}})});
+          const data=await res.json();
+          if(!res.ok || !data.success) throw new Error(data.error || 'Generation failed.');
+          const d=data.data || data;
+          const qs=(d.questions||[]).map(normalizeQuestion);
+          setQuestions(qs); setSummary(d.summary||''); setFlashcards(d.flashcards||[]); setTab('materials'); setStatus(`${qs.length} questions generated.`);
+          setAnswers({}); setScore(null); setQuizIndex(0);
+        }catch(e){
+          setError(e.message); setStatus('');
+        }finally{setLoading(false)}
+      };
+
+      const choose=(answer)=>setAnswers(a=>({...a,[current.id]:answer}));
+      const finish=()=>{
+        let s=0;
+        questions.forEach(q=>{
+          const a=answers[q.id];
+          if(q.type==='short'){
+            const target=(q.sampleAnswer||q.answer||'').toLowerCase().trim();
+            const given=String(a||'').toLowerCase().trim();
+            if(given && target && (target.includes(given)||given.includes(target))) s++;
+          }else if(a===q.correct) s++;
+        });
+        setScore(s); setTab('results');
+      };
+
+      const exportTxt=()=>{
+        const text=questions.map((q,i)=>`${i+1}. ${q.question}\nAnswer: ${q.type==='mcq'?q.options['ABCD'.indexOf(q.correct)]||q.correct:q.correct||q.sampleAnswer}\n`).join('\n');
+        const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'})); a.download='quizgen-questions.txt'; a.click();
+      };
+      const exportPdf=()=>{
+        const {jsPDF}=window.jspdf; const doc=new jsPDF(); let y=24;
+        doc.setFontSize(18); doc.text('QuizGen Pro — Generated Questions',14,y); y+=12; doc.setFontSize(10);
+        questions.forEach((q,i)=>{
+          const text=`${i+1}. ${q.question}\nAnswer: ${q.type==='mcq'?q.options['ABCD'.indexOf(q.correct)]||q.correct:q.correct||q.sampleAnswer}`;
+          const lines=doc.splitTextToSize(text,180); if(y+lines.length*5>285){doc.addPage();y=20} doc.text(lines,14,y); y+=lines.length*5+7;
+        }); doc.save('quizgen-questions.pdf');
+      };
+
+      return <div className="app-shell">
+        <header className="topbar glass">
+          <div className="brand"><span className="brand-mark">Q</span><div><strong>QuizGen Pro</strong><small>AI study workspace</small></div></div>
+          <div className="top-actions"><span className="status-dot"></span><span>Ready</span></div>
+        </header>
+
+        <main className="main">
+          <section className="hero">
+            <div className="eyebrow">AI-POWERED LEARNING</div>
+            <h1>Turn your notes into<br/><span>better questions.</span></h1>
+            <p>Upload a PDF, paste your notes, and build a focused study session in seconds.</p>
+          </section>
+
+          <nav className="tabs glass" aria-label="QuizGen sections">
+            {[['generate','Create'],['materials','Materials'],['quiz','Quiz'],['results','Results']].map(([id,label])=><button key={id} className={tab===id?'active':''} disabled={(id!=='generate'&&id!=='materials'&&questions.length===0)} onClick={()=>setTab(id)}>{label}</button>)}
+          </nav>
+
+          {error && <div className="notice error">{error}<button onClick={()=>setError('')}>×</button></div>}
+          {status && <div className="notice success">{status}</div>}
+
+          {tab==='generate' && <section className="workspace grid-main">
+            <div className="panel glass">
+              <div className="panel-head"><div><span className="kicker">01</span><h2>Source material</h2></div><span className="muted">{content.length.toLocaleString()} chars</span></div>
+              <div className={`dropzone ${drag?'drag':''}`} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);handleFiles([...e.dataTransfer.files])}} onClick={()=>fileRef.current?.click()}>
+                <div className="upload-icon">↑</div><strong>Drop files here</strong><span>PDF, TXT, MD · or click to browse</span><input ref={fileRef} hidden type="file" multiple accept=".pdf,.txt,.md" onChange={e=>handleFiles([...e.target.files])}/>
+              </div>
+              {files.length>0 && <div className="file-row">{files.map((f,i)=><span key={i} className="chip">{f.name}</span>)}</div>}
+              <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="Or paste your study notes here…" />
+            </div>
+            <aside className="panel glass settings-panel">
+              <div className="panel-head"><div><span className="kicker">02</span><h2>Session</h2></div><span className="count-badge">{totalQuestions}</span></div>
+              <label>Question mix</label>
+              {Object.entries(types).map(([k,v])=><div className="setting" key={k}><span>{k==='mcq'?'Multiple choice':k==='truefalse'?'True / False':'Short answer'}</span><input type="number" min="0" max="20" value={v} onChange={e=>setTypes(t=>({...t,[k]:Math.max(0,Math.min(20,+e.target.value||0))}))}/></div>)}
+              <label>Difficulty</label>
+              {Object.entries(difficulty).map(([k,v])=><div className="setting" key={k}><span>{k}</span><input type="number" min="0" max="20" value={v} onChange={e=>setDifficulty(d=>({...d,[k]:Math.max(0,Math.min(20,+e.target.value||0))}))}/></div>)}
+              <button className="primary wide" disabled={loading||!content.trim()} onClick={generate}>{loading?'Generating…':'Generate materials'} <span>→</span></button>
+            </aside>
+          </section>}
+
+          {tab==='materials' && <section className="materials">
+            <div className="summary panel glass"><div className="panel-head"><div><span className="kicker">SUMMARY</span><h2>What you should know</h2></div><div className="actions"><button className="secondary" onClick={exportTxt}>TXT</button><button className="secondary" onClick={exportPdf}>PDF</button><button className="primary" onClick={()=>{setQuizIndex(0);setAnswers({});setScore(null);setTab('quiz')}}>Start quiz →</button></div></div><p>{summary||'No summary generated yet.'}</p></div>
+            <div className="section-title"><span>QUESTIONS</span><strong>{questions.length}</strong></div>
+            <div className="question-grid">{questions.map((q,i)=><article className="question-card glass" key={q.id}><div className="q-meta"><span>Q{i+1}</span><em>{q.difficulty}</em><em>{q.type}</em></div><h3>{q.question}</h3>{q.options.length>0&&<ol>{q.options.map((o,j)=><li key={j}><span>{String.fromCharCode(65+j)}</span>{o}</li>)}</ol>}<div className="explanation">{q.explanation}</div></article>)}</div>
+            <div className="section-title"><span>FLASHCARDS</span><strong>{flashcards.length}</strong></div>
+            <div className="card-grid">{flashcards.map(c=><div className={'flash glass '+(flipped.has(c.id)?'is-flipped':'')} key={c.id} onClick={()=>setFlipped(s=>{const n=new Set(s);n.has(c.id)?n.delete(c.id):n.add(c.id);return n})}><div className="face front"><small>{c.category}</small><h3>{c.front}</h3><span>Click to reveal</span></div><div className="face back"><h3>{c.front}</h3><p>{c.back}</p></div></div>)}</div>
+          </section>}
+
+          {tab==='quiz' && current && <section className="quiz panel glass"><div className="quiz-head"><span>Question {quizIndex+1} of {questions.length}</span><span>{progress}%</span></div><div className="progress"><i style={{width:progress+'%'}}></i></div><div className="quiz-body"><em>{current.difficulty}</em><h2>{current.question}</h2>{current.type==='short'?<textarea value={answers[current.id]||''} onChange={e=>choose(e.target.value)} placeholder="Type your answer…"/>:<div className="answers">{current.options.map((o,i)=><button key={i} className={answers[current.id]=== (current.type==='mcq'?String.fromCharCode(65+i):o)?'chosen':''} onClick={()=>choose(current.type==='mcq'?String.fromCharCode(65+i):o)}><span>{current.type==='mcq'?String.fromCharCode(65+i):i+1}</span>{o}</button>)}</div>}<div className="quiz-actions"><button className="secondary" disabled={quizIndex===0} onClick={()=>setQuizIndex(i=>i-1)}>Back</button>{quizIndex===questions.length-1?<button className="primary" onClick={finish}>Finish →</button>:<button className="primary" onClick={()=>setQuizIndex(i=>i+1)}>Next →</button>}</div></div></section>}
+
+          {tab==='results' && <section className="results panel glass"><div className="result-ring"><strong>{score===null?'—':Math.round((score/questions.length)*100)+'%'}</strong><span>accuracy</span></div><h2>{score===null?'No attempt yet':score===questions.length?'Perfect session.':score/questions.length>=.7?'Strong work.':'Keep going.'}</h2><p>{score===null?'Complete a quiz to see your performance.':`${score} correct out of ${questions.length}. Review the explanations and try again.`}</p>{score!==null&&<button className="primary" onClick={()=>{setQuizIndex(0);setAnswers({});setScore(null);setTab('quiz')}}>Try again →</button>}</section>}
+        </main>
+        {loading&&<div className="loading"><div className="spinner"></div><strong>Working…</strong><span>Keep this window open.</span></div>}
+      </div>
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
 </body>
 </html>
