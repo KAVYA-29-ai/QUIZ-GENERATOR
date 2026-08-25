@@ -1,7 +1,7 @@
 {
   "name": "quizgen-pro",
-  "version": "1.0.0",
-  "description": "AI-Powered Quiz Generator with Netlify Functions",
+  "version": "1.1.0",
+  "description": "AI-powered quiz generator with Gemini and Netlify Functions",
   "main": "index.html",
   "scripts": {
     "dev": "netlify dev",
@@ -9,7 +9,7 @@
     "deploy": "netlify deploy --prod"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.12.0"
+    "@google/generative-ai": "^0.24.1"
   },
   "devDependencies": {
     "netlify-cli": "^17.0.0",
@@ -19,6 +19,6 @@
     "type": "git",
     "url": "https://github.com/KAVYA-29-ai/QUIZ-GENERATOR"
   },
-  "author": "Your Name",
+  "author": "Kavya Rajput",
   "license": "MIT"
 }
